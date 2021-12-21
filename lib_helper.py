@@ -92,5 +92,6 @@ def get_mm2(branch=None):
     with ZipFile(asset_name, 'r') as zf:
         status_print(f'Extracting {asset_name}...')
         zf.extractall()
+        os.chmod('mm2', stat.S_IEXEC)
         status_print('Done!')
 

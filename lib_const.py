@@ -3,11 +3,12 @@ import os
 import io
 import sys
 import json
+import stat
 import time
 import string
 import random
 import os.path
-import zipfile
+from zipfile import ZipFile
 import platform
 import mnemonic
 import requests
@@ -248,6 +249,8 @@ if OP_SYS not in VALID_OP_SYS:
     sys.exit()
 if OP_SYS == "Windows":
     OP_SYS = "Windows_NT"
+    error_print(f"Windows is not currently supported, but you can try using WSL.\n See https://docs.microsoft.com/en-us/windows/wsl/install")
+    sys.exit()
 
 # Load or create MM2.json
 MM2_JSON = load_MM2_json()

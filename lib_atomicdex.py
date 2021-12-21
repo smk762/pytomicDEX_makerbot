@@ -5,7 +5,7 @@ from lib_helper import *
 
 def start_mm2(logfile='mm2_output.log'):
     if not os.path.isfile('mm2'):
-        error_print("\nmm2 binary not found in "+script_path+"!")
+        error_print("\nmm2 binary not found in "+SCRIPT_PATH+"!")
         get_mm2("dev")
     mm2_output = open(logfile,'w+')
     subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True)
