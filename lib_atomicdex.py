@@ -94,7 +94,7 @@ def get_swaps_summary_table(limit=500):
                             }
                         })
                 swaps_summary['coins'][my_coin]["sent"] += my_amount
-                swaps_summary['coins'][other_coin]["sent"] += other_amount
+                swaps_summary['coins'][other_coin]["received"] += other_amount
                 swaps_summary['coins'][my_coin]["swaps"] += 1
                 swaps_summary['coins'][other_coin]["swaps"] += 1
             else:
@@ -106,14 +106,14 @@ def get_swaps_summary_table(limit=500):
         total_swaps = 0
         total_value_delta = 0
         # Pairs table
-        table_print("-"*66)
+        table_print("-"*57)
         table_print('|{:^12}|{:^8}|{:^16}|{:^16}|'.format(
             "PAIR",
             "SWAPS",
             "SENT",
             "RECEIVED"
         ))
-        table_print("-"*66)
+        table_print("-"*57)
         for pair in swaps_summary['pairs']:
             table_print('|{:^12}|{:^8}|{:^16}|{:^16}|'.format(
                     pair,
@@ -123,12 +123,12 @@ def get_swaps_summary_table(limit=500):
                 )
             )
             total_swaps += swaps_summary['pairs'][pair]["swaps"]
-        table_print("-"*66)
+        table_print("-"*57)
         table_print("")
 
         # Coins Table
-        table_print("-"*94)
-        table_print('|{:^12}|{:^8}|{:^16}|{:^16}|{:^16}|{:^16}|'.format(
+        table_print("-"*108)
+        table_print('|{:^12}|{:^8}|{:^16}|{:^16}|{:^16}|{:^16}|{:^16}|'.format(
             "COIN",
             "SWAPS",
             "SENT",
@@ -137,26 +137,28 @@ def get_swaps_summary_table(limit=500):
             "PRICE",
             "VALUE DELTA"
         ))
+        table_print("-"*108)
         for coin in swaps_summary['coins']:
-            delta = swaps_summary['pairs'][pair]["received"] - swaps_summary['pairs'][pair]["sent"]
+            delta = swaps_summary['coins'][coin]["received"] - swaps_summary['coins'][coin]["sent"]
             price = get_price(coin, current_prices)
             value_delta = round(price * delta, 2)
             total_value_delta += value_delta
-            table_print('|{:^12}|{:^8}|{:^16}|{:^16}|{:^16}|{:^16}|'.format(
-                    pair,
-                    swaps_summary['pairs'][pair]["swaps"],
-                    '{:16.8f}'.format(swaps_summary['pairs'][pair]["sent"]),
-                    '{:16.8f}'.format(swaps_summary['pairs'][pair]["received"]),
+            table_print('|{:^12}|{:^8}|{:^16}|{:^16}|{:^16}|{:^16}|{:^16}|'.format(
+                    coin,
+                    swaps_summary['coins'][coin]["swaps"],
+                    '{:16.8f}'.format(swaps_summary['coins'][coin]["sent"]),
+                    '{:16.8f}'.format(swaps_summary['coins'][coin]["received"]),
                     '{:16.8f}'.format(delta),
                     '{:16.8f}'.format(price),
                     '{:16.8f}'.format(value_delta),
                 )
             )
-        table_print("-"*94)
+        table_print("-"*108)
         table_print("")
+        
         # Summary
         table_print("-"*42)
-        table_print('|{:^40}|'.format(
+        table_print('|{:^40}|\n|{:^40}|'.format(
                 f"Total Swaps: {total_swaps}",
                 f"Total Delta: USD ${round(total_value_delta, 2)}"
             )

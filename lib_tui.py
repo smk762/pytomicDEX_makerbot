@@ -9,6 +9,7 @@ def start_makerbot():
     coins_list = list(set(makerbot_settings["buy_coins"] + makerbot_settings["sell_coins"]))
     success_print("Activating Makerbot coins...")
     activate_coins(coins_list)
+    view_makerbot_params(makerbot_params)
     # sleep for a bit so in progress orders can be kickstarted
     time.sleep(5)
     command = {
@@ -23,6 +24,18 @@ def start_makerbot():
         if 'result' in resp['result']:
             if resp['result']['result'] == "Success":
                 success_print(f"Makerbot started with {pair_count} pairs")
+            else:
+                success_print(resp)
+        else:
+            success_print(resp)
+    elif 'error' in resp:
+        if 'error_type' in resp:
+            if resp['error_type'] == "AlreadyStarted":
+                error_print(f"Makerbot has already been started.")
+            else:
+                error_print(resp)
+        else:
+            error_print(resp)
     else:
         error_print(resp)
 
@@ -88,6 +101,7 @@ def update_makerbot():
             if q.lower() == 'c':
                 return
         update_makerbot_pair(pair)
+    error_print(f"Note: You need to stop and restart the Makerbot before these settings take effect!")
     # stop makerbot
     # wait for loop to end (add timer)
     # restart makerbot
