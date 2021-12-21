@@ -1,3 +1,16 @@
+# Custom
+mm2*
+*.zip
+*.log
+coins
+*.json
+.env
+libmm2*
+*.csv
+userpass
+DB/
+old/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
