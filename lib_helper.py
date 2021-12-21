@@ -1,11 +1,13 @@
 #!/bin/python3
 from lib_const import *
 
+
 def sec_to_hms(sec):
   minutes, seconds = divmod(sec, 60)
   hours, minutes = divmod(minutes, 60)
   periods = [('h', hours), ('m', minutes), ('s', seconds)]
   return ' '.join('{}{}'.format(int(val), name) for name, val in periods if val)
+
 
 def get_activate_command(coin):
   return requests.get(f"https://stats.kmd.io/api/atomicdex/activation_commands/?coin={coin}").json()
@@ -20,6 +22,7 @@ def get_price(coin, current_prices=None):
     return float(current_prices[coin]["last_price"])
   else:
     return 0
+
 
 def download_progress(url, fn):
     with open(fn, 'wb') as f:

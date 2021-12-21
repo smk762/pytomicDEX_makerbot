@@ -301,6 +301,13 @@ def get_balances_table(coins_list=None, current_prices=None):
         )
 
 
+def view_makerbot_params(makerbot_params):
+    table_print(f"Prices URL: {makerbot_params['price_url']}")
+    table_print(f"Refresh rate: {makerbot_params['bot_refresh_rate']} sec")
+    for pair in makerbot_params['cfg']:
+        cfg = makerbot_params['cfg'][pair]
+        table_print(f'{pair}: {round((float(cfg["spread"])-1)*100,4)}% spread, {cfg["min_volume"]["usd"]} min USD, {cfg["max_volume"]["usd"]} max USD')
+
 
 def get_version():
     params = {"method":"version"}
@@ -324,3 +331,28 @@ def get_enabled_coins_list():
         for item in enabled_coins["result"]:
             coins_list.append(item["ticker"])
     return coins_list
+
+
+def update_makerbot_pair(pair):
+    base_rel = pair.split("/")
+    status_print(f"Updating config to sell {base_rel[0]} for {base_rel[1]}")
+    min_usd = color_input("Enter minimum trade value in USD (e.g. 10): ")
+    max_usd = color_input("Enter maximum trade value in USD (e.g. 100): ")
+    spread = color_input("Enter spread percentage (e.g. 5): ")
+    spread = 1+(float(spread)/100)
+    reload_makerbot_settings(base_rel[0], base_rel[1])
+    update_makerbot_params(base_rel[0], base_rel[1], min_usd, max_usd, spread)
+    load_makerbot_params()
+
+
+def reload_makerbot_settings(base, rel):
+    makerbot_settings = load_makerbot_settings()
+
+    if base not in makerbot_settings["buy_coins"]:
+        makerbot_settings["buy_coins"].append(base)
+
+    if rel not in makerbot_settings["sell_coins"]:
+        makerbot_settings["sell_coins"].append(rel)
+
+    with open("makerbot_settings.json", "w+") as f:
+        json.dump(makerbot_settings, f, indent=4)

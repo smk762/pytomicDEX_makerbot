@@ -8,6 +8,7 @@ if len(sys.argv) > 1:
         coins_list.append(sys.argv[i])
     activate_coins(coins_list)
 else:
+    makerbot_settings = load_makerbot_settings()
     status_print(f"No parameters detected (e.g. ./activate.py KMD BTC TKL)! Using coins in makerbot_settings.json...")
-    coins_list = list(set(BUY_COINS + SELL_COINS))
+    coins_list = list(set(makerbot_settings["buy_coins"] + makerbot_settings["sell_coins"]))
     activate_coins(coins_list)

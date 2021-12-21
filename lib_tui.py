@@ -3,7 +3,10 @@ from lib_atomicdex import *
 
 
 def start_makerbot():
-    coins_list = list(set(BUY_COINS + SELL_COINS))
+    makerbot_settings = load_makerbot_settings()
+    makerbot_params = load_makerbot_params()
+
+    coins_list = list(set(makerbot_settings["buy_coins"] + makerbot_settings["sell_coins"]))
     success_print("Activating Makerbot coins...")
     activate_coins(coins_list)
     # sleep for a bit so in progress orders can be kickstarted
@@ -12,9 +15,9 @@ def start_makerbot():
         "userpass": MM2_USERPASS,
         "mmrpc": "2.0",
         "method": "start_simple_market_maker_bot",
-        "params": MAKERBOT_PARAMS
+        "params": makerbot_params
     }
-    pair_count = len(MAKERBOT_PARAMS["cfg"])
+    pair_count = len(makerbot_params["cfg"])
     resp = mm2_proxy(command)
     if 'result' in resp:
         if 'result' in resp['result']:
@@ -33,29 +36,61 @@ def stop_makerbot():
     }
     resp = mm2_proxy(params)
     if 'error' in resp:
-        if resp['error'].find("bot is already stopped") > 0:
-            error_print("The Makerbot is not running")
+        # error_print(resp)
+        if 'error_type' in resp:
+            if resp['error_type'] == "AlreadyStopping":
+                error_print(f"Makerbot is stopping at the end of it's current loop ({makerbot_settings['refresh_rate']} seconds).")
+            elif resp['error_type'] == "AlreadyStopped":
+                error_print("The Makerbot is not running")
+            else:
+                error_print(resp)
         else:
             error_print(resp)
     elif 'result' in resp:
         if 'result' in resp['result']:
             if resp['result']['result'] == "Success":
-                success_print(f"Makerbot stopped.")
+                success_print(f"Makerbot will stop at the end of it's current loop ({makerbot_settings['refresh_rate']} seconds).")
+            else:
+                success_print(resp)
+        else:
+            success_print(resp)
     else:
-        error_print(resp)
+        success_print(resp)
 
 def update_makerbot():
-    view_makerbot_params()
+    makerbot_params = load_makerbot_params()
+    view_makerbot_params(makerbot_params)
+ 
     # Update all or choose a pair
-    update_all = True
-    if update_all:
-        MAKERBOT_SETTINGS = get_makerbot_settings(True)
-    # get new settings
-    # build new config
+    q = color_input("Update [A]ll, a [P]air or [R]eturn to menu? [A/P/R] ")
+
+    while q.lower() not in ["a", "p", "r"]:
+        error_print("Invalid option, try again.")
+        q = color_input("Update [A]ll, a [P]air or [R]eturn to menu? [A/P/R] ")
+
+    if q.lower() == 'a':
+        create_makerbot_settings()
+    
+    elif q.lower() == 'p':
+        pair = color_input("Enter the pair you want to update: ")
+        while "/" not in pair:
+            error_print("Invalid input. Needs to be like SELLTICKER/BASETICKER")
+            pair = color_input("Enter the pair you want to update: ")
+
+        pairs = list(makerbot_params['cfg'].keys())
+
+        if pair not in pairs:
+            error_print(f"{pair} not found in existing config!")
+            q = color_input("[A]dd new pair or [C]ancel? [A/C] ")
+            while q.lower() not in ["a", "c"]:
+                error_print("Invalid option, try again.")
+                q = color_input("[A]dd new pair or [C]ancel? [A/C] ")
+            if q.lower() == 'c':
+                return
+        update_makerbot_pair(pair)
     # stop makerbot
     # wait for loop to end (add timer)
     # restart makerbot
-    pass
 
 
 def activate_coins_tui():

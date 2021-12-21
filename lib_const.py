@@ -74,57 +74,55 @@ def generate_rpc_pass(length):
     return ''.join(str_list)
 
 
-def get_config(base,rel):
+def get_config(base, rel, min_usd, max_usd, spread):
   config_template = {
       "base": "base_coin",
       "rel": "rel_coin",
-      "min_volume": {
-          "usd":MIN_USD
-      },
-      "max_volume":  {
-          "usd":MAX_USD
-      },
-      "spread": SPREAD,
       "base_confs": 3,
       "base_nota": True,
       "rel_confs": 3,
       "rel_nota": True,
       "enable": True,
-      "price_elapsed_validity": int(PRICES_API_TIMEOUT),
-      "check_last_bidirectional_trade_thresh_hold": USE_BIDIRECTIONAL_THRESHOLD
+      "price_elapsed_validity": 180,
+      "check_last_bidirectional_trade_thresh_hold": True
   }
   cfg = config_template.copy()
   cfg.update({
       "base": base,
-      "rel": rel, 
+      "rel": rel,
+      "min_volume": {
+          "usd":int(min_usd)
+      },
+      "max_volume":  {
+          "usd":int(max_usd)
+      },
+
+      "spread": round(spread,4)
   })
   return cfg
 
 
-def view_makerbot_params():
-    with open("makerbot_command_params.json", "r") as f:
-        MAKERBOT_PARAMS = json.load(f)
-    table_print(f"Prices URL: {MAKERBOT_PARAMS['price_url']}")
-    table_print(f"Refresh rate: {MAKERBOT_PARAMS['bot_refresh_rate']} sec")
-    for pair in MAKERBOT_PARAMS['cfg']:
-        cfg = MAKERBOT_PARAMS['cfg'][pair]
-        table_print(f'{pair}: {round((cfg["spread"]-1)*100,3)}% spread, {cfg["min_volume"]["usd"]} min USD, {cfg["max_volume"]["usd"]} max USD')
-
-# Documentation reference: https://developers.komodoplatform.com/basic-docs/atomicdex-api-20-dev/start_simple_market_maker_bot.html
-def get_makerbot_params():
-    global MAKERBOT_PARAMS
+def create_makerbot_params(makerbot_settings):
+    buy_coins = makerbot_settings["buy_coins"]
+    sell_coins = makerbot_settings["sell_coins"]
+    min_usd = makerbot_settings["default_min_usd"]
+    max_usd = makerbot_settings["default_max_usd"]
+    spread = makerbot_settings["default_spread"]
+    order_refresh_rate = makerbot_settings["refresh_rate"]
+    use_bidirectional_threshold = True
     params = {
         "price_url": PRICES_API,
-        "bot_refresh_rate": int(ORDER_REFRESH_RATE)    
+        "bot_refresh_rate": int(order_refresh_rate)    
     }
 
     configs = {}
-    for base in SELL_COINS:
-        for rel in BUY_COINS:
+    for base in sell_coins:
+        for rel in buy_coins:
             if base != rel:
                 configs.update({
-                    f"{base}/{rel}": get_config(base, rel)
+                    f"{base}/{rel}": get_config(base, rel, min_usd, max_usd, spread)
                 })
+
     params.update({
         "cfg":configs
     })
@@ -132,48 +130,74 @@ def get_makerbot_params():
     with open('makerbot_command_params.json', 'w', encoding='utf-8') as f:
         json.dump(params, f, ensure_ascii=False, indent=4)
 
-    with open("makerbot_command_params.json", "r") as f:
-        MAKERBOT_PARAMS = json.load(f)
 
-    return MAKERBOT_PARAMS
+def update_makerbot_params(base, rel, min_usd, max_usd, spread):
+    makerbot_params = load_makerbot_params()
+
+    config = get_config(base, rel, min_usd, max_usd, spread)
+    makerbot_params["cfg"].update({
+        f"{base}/{rel}": config
+    })
+
+    with open('makerbot_command_params.json', 'w', encoding='utf-8') as f:
+        json.dump(makerbot_params, f, ensure_ascii=False, indent=4)
 
 
-def get_makerbot_settings(update=False):
-    global MAKERBOT_SETTINGS
-    global BUY_COINS
-    global SELL_COINS
-    if not os.path.exists("makerbot_settings.json") or update:
+def get_makerbot_params():
+    if not os.path.exists("makerbot_command_params.json"):
+        create_makerbot_settings()
+
+
+def create_makerbot_settings():
+    q = "n"
+    while q.lower() == "n":
         sell_coins = color_input("Enter tickers of coins you want to sell, seperated by a space:\n")
         buy_coins = color_input("Enter tickers of coins you want to buy, seperated by a space:\n")
-        min_usd =  color_input("Enter minimum trade value in USD (e.g. 10): ")
-        max_usd =  color_input("Enter maximum trade value in USD (e.g. 100): ")
-        spread =  color_input("Enter spread percentage (e.g. 5): ")
-        refresh_rate =  color_input("How often to update prices in seconds (e.g. 180): ")
+        min_usd = color_input("Enter default minimum trade value in USD (e.g. 10): ")
+        max_usd = color_input("Enter default maximum trade value in USD (e.g. 100): ")
+        spread = color_input("Enter default spread percentage (e.g. 5): ")
+        refresh_rate = color_input("How often to update prices in seconds (e.g. 180): ")
 
-        makerbot_conf = {
+        makerbot_settings = {
             "sell_coins": sell_coins.split(" "),
             "buy_coins": buy_coins.split(" "),
-            "min_usd": int(min_usd),
-            "max_usd": int(max_usd),
-            "spread": 1+(float(spread)/100),
+            "default_min_usd": int(min_usd),
+            "default_max_usd": int(max_usd),
+            "default_spread": 1+(float(spread)/100),
             "refresh_rate": refresh_rate,
             "prices_api": PRICES_API,
             "prices_api_timeout": 180,
             "use_bidirectional_threshold": True,
         }
 
-        table_print(json.dumps(makerbot_conf, indent=4))
-        resp = color_input("Confirm configuration? [Y/N]: ")
+        table_print(json.dumps(makerbot_settings, indent=4))
+        q = color_input("Confirm configuration? [Y/N]: ")
 
-        with open("makerbot_settings.json", "w+") as f:
-            json.dump(makerbot_conf, f, indent=4)
+        while q.lower() not in ["y", "n"]:
+            error_print("Invalid option!")
+            q = color_input("Confirm configuration? [Y/N]: ")
 
+    with open("makerbot_settings.json", "w+") as f:
+        json.dump(makerbot_settings, f, indent=4)
+    create_makerbot_params(makerbot_settings)
+
+
+def load_makerbot_settings():
     with open("makerbot_settings.json", "r") as f:
-        MAKERBOT_SETTINGS = json.load(f)
+        return json.load(f)
 
-    BUY_COINS = MAKERBOT_SETTINGS["buy_coins"]
-    SELL_COINS = MAKERBOT_SETTINGS["sell_coins"]
-    return MAKERBOT_SETTINGS
+
+# Documentation reference: https://developers.komodoplatform.com/basic-docs/atomicdex-api-20-dev/start_simple_market_maker_bot.html
+def load_makerbot_params():
+    with open("makerbot_command_params.json", "r") as f:
+        return json.load(f)
+
+
+def get_makerbot_settings():
+    if not os.path.exists("makerbot_settings.json"):
+        status_print("\nFirst we need to set up some configs...")
+        create_makerbot_settings()
+
 
 
 # Load or Create MM2.json
@@ -261,16 +285,8 @@ MM2_IP = "http://127.0.0.1:7783"
 get_coins_file()
 
 # Setup or load makerbot_settings.json
-MAKERBOT_SETTINGS = get_makerbot_settings()
-BUY_COINS = MAKERBOT_SETTINGS["buy_coins"]
-SELL_COINS = MAKERBOT_SETTINGS["sell_coins"]
-MIN_USD = MAKERBOT_SETTINGS["min_usd"]
-MAX_USD = MAKERBOT_SETTINGS["max_usd"]
-SPREAD = MAKERBOT_SETTINGS["spread"]
-ORDER_REFRESH_RATE = MAKERBOT_SETTINGS["refresh_rate"]
-PRICES_API_TIMEOUT = MAKERBOT_SETTINGS["prices_api_timeout"]
-USE_BIDIRECTIONAL_THRESHOLD = MAKERBOT_SETTINGS["use_bidirectional_threshold"]
+get_makerbot_settings()
 
-# Setup makerbot_params.json
-MAKERBOT_PARAMS = get_makerbot_params()
+# Setup or create makerbot_params.json
+get_makerbot_params()
 

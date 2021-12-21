@@ -12,8 +12,8 @@ header = "\
    /_/    \_\__\___/|_| |_| |_|_|\___|_____/|______/_/ \_\  \n\
   __  __           _                    _         .     _   \n\
  |  \/  |   __ _  | | __   ___   _ __  | |__     _*_   | |_ \n\
- | |\/| |  / _` | | |/ /  / _ \ | '__| | '_ \   /   \  | __|\n\
- | |  | | | (_| | |   <  |  __/ | |    | |_) | | 0 0 | | |_ \n\
+ | |\/| |  / _` | | |/ /  / _ \ | '__| | '_ \   / . \  | __|\n\
+ | |  | | | (_| | |   <  |  __/ | |    | |_) | <-0 0-> | |_ \n\
  |_|  |_|  \__,_| |_|\_\  \___| |_|    |_.__/   \_^_/   \__|\n"
 
 author = '{:^60}'.format('Welcome to the AtomicDEX MakerBot TUI v0.1 by Thorn Mennet')
@@ -21,7 +21,7 @@ author = '{:^60}'.format('Welcome to the AtomicDEX MakerBot TUI v0.1 by Thorn Me
 def main():
     menu_items = [
         {"Start Makerbot": lib_tui.start_makerbot},
-        {"Update Makerbot": lib_tui.update_makerbot},
+        {"View/Update Makerbot": lib_tui.update_makerbot},
         {"Stop Makerbot": lib_tui.stop_makerbot},
         {"Activate Coins": lib_tui.activate_coins_tui},
         {"View Balances": lib_tui.view_balances},
