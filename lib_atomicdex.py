@@ -8,11 +8,12 @@ def start_mm2(logfile='mm2_output.log'):
         error_print("\nmm2 binary not found in "+SCRIPT_PATH+"!")
         get_mm2("dev")
     mm2_output = open(logfile,'w+')
-    subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True)
+    subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True, preexec_fn=preexec)
     
     time.sleep(1)
     version = get_version()
-    success_print(f"AtomicDEX-API {version} starting. Use 'tail -f {logfile}' for mm2 console messages.")
+    success_print('{:^60}'.format( "AtomicDEX-API starting."))
+    success_print('{:^60}'.format( " Use 'tail -f "+logfile+"' for mm2 console messages."))
 
 
 def mm2_proxy(params):
@@ -21,7 +22,6 @@ def mm2_proxy(params):
     try:
         r = requests.post(MM2_IP, json.dumps(params))
     except requests.exceptions.RequestException as e:
-        status_print("AtomicDEX-API is not running! We'll start it for you...")
         start_mm2()
         r = requests.post(MM2_IP, json.dumps(params))
     return r.json()
@@ -155,7 +155,7 @@ def get_swaps_summary_table(limit=500):
             )
         table_print("-"*108)
         table_print("")
-        
+
         # Summary
         table_print("-"*42)
         table_print('|{:^40}|\n|{:^40}|'.format(
@@ -170,18 +170,8 @@ def get_swaps_summary_table(limit=500):
 def get_orders_table(current_prices=None):
     if not current_prices:
         current_prices = requests.get(PRICES_API).json()
-    params = {"userpass":"$userpass","method":"my_orders"}
-    resp = mm2_proxy(params)
-    if 'result' in resp:
-        if 'maker_orders' in resp['result']:
-            maker_orders = resp['result']['maker_orders']
-        if 'taker_orders' in resp['result']:
-            taker_orders = resp['result']['taker_orders']
-    else:
-        error_print(f"Error: {resp}")
-
-
-    order_count = len(maker_orders) + len(taker_orders)
+    orders = get_orders()
+    maker_orders, taker_orders, order_count = get_order_count(orders)
     if order_count == 0:
         status_print("You have no active orders...")
     else:
@@ -304,11 +294,31 @@ def get_balances_table(coins_list=None, current_prices=None):
 
 
 def view_makerbot_params(makerbot_params):
-    table_print(f"Prices URL: {makerbot_params['price_url']}")
-    table_print(f"Refresh rate: {makerbot_params['bot_refresh_rate']} sec")
+    table_print("-"*85)
+    table_print('|{:^83}|'.format(
+            f"MAKERBOT SETTINGS"
+        )
+    )
+    table_print("-"*85)
+    table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
+        "PAIR",
+        "SPREAD",
+        "MIN USD",
+        "MAX USD"
+    ))
+    table_print("-"*85)
     for pair in makerbot_params['cfg']:
         cfg = makerbot_params['cfg'][pair]
-        table_print(f'{pair}: {round((float(cfg["spread"])-1)*100,4)}% spread, {cfg["min_volume"]["usd"]} min USD, {cfg["max_volume"]["usd"]} max USD')
+    table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
+            pair,
+            f'{round((float(cfg["spread"])-1)*100,4)}%',
+            f'{cfg["min_volume"]["usd"]}',
+            f'{cfg["max_volume"]["usd"]}'
+        )
+    )
+    table_print("-"*85)
+    
+         
 
 
 def get_version():
@@ -358,3 +368,100 @@ def reload_makerbot_settings(base, rel):
 
     with open("makerbot_settings.json", "w+") as f:
         json.dump(makerbot_settings, f, indent=4)
+
+def activate_bot_coins(enabled_coins=False):
+    if not enabled_coins:
+        enabled_coins = get_enabled_coins_list()
+    makerbot_settings = load_makerbot_settings()
+    coins_list = list(set(makerbot_settings["buy_coins"] + makerbot_settings["sell_coins"]) - set(enabled_coins))
+    if len(coins_list) > 0:
+        success_print("Activating Makerbot coins...")
+        activate_coins(coins_list)
+
+def loop_views():
+    coins_list = get_enabled_coins_list()
+    makerbot_params = load_makerbot_params()
+    msg = "\nEnter Ctrl-C to exit\n"
+    while True:
+        try:
+            view_makerbot_params(makerbot_params)
+            sleep_message(msg, 20)
+            get_balances_table(coins_list)
+            sleep_message(msg, 20)
+            get_orders_table()
+            sleep_message(msg, 20)
+            get_swaps_summary_table()
+            sleep_message(msg, 20)
+        except KeyboardInterrupt:
+            break
+
+def get_status():
+    
+    maker_orders, taker_orders, order_count = get_order_count(get_orders())
+    active_swaps_count = len(get_active_swaps()["uuids"])
+    successful_swaps_count, failed_swaps_count, delta = get_recent_swaps_info()
+    # Add status: order count, swaps in progress, delta
+    status_print('{:^60}'.format(
+            f"MM2 Version: {get_version()}"
+        )
+    )
+    status_print('{:^60}\n{:^60}'.format(
+            f"{(len(get_enabled_coins_list()))} Coins, {order_count} Orders active. Delta: ${round(delta,2)} USD",
+            f"Swaps: {active_swaps_count} active, {successful_swaps_count} complete, {failed_swaps_count} failed"
+        )
+    )
+
+def get_recent_swaps_info():
+    total_value_delta = 0
+    failed_swaps_count = 0
+    successful_swaps_count = 0
+    my_recent_swaps = get_recent_swaps()
+    swaps_summary = {"coins":{}}
+    for swap in my_recent_swaps["result"]["swaps"]:
+        include_swap = True
+
+        for event in swap["events"]:
+            if event["event"]["type"] in ERROR_EVENTS:
+                include_swap = False
+                failed_swaps_count += 1
+                break
+
+        if include_swap:
+            successful_swaps_count += 1
+            my_coin = swap["my_info"]["my_coin"]
+            my_amount = float(swap["my_info"]["my_amount"])
+            other_coin = swap["my_info"]["other_coin"]
+            other_amount = float(swap["my_info"]["other_amount"])
+
+            for coin in [my_coin, other_coin]:
+                if coin not in swaps_summary['coins']:
+                    swaps_summary['coins'].update({
+                        coin: {
+                            "sent": 0,
+                            "received": 0
+                        }
+                    })
+            swaps_summary['coins'][my_coin]["sent"] += my_amount
+            swaps_summary['coins'][other_coin]["received"] += other_amount
+
+    current_prices = requests.get(PRICES_API).json()
+
+    for coin in swaps_summary['coins']:
+        delta = swaps_summary['coins'][coin]["received"] - swaps_summary['coins'][coin]["sent"]
+        price = get_price(coin, current_prices)
+        total_value_delta += round(price * delta, 2)
+
+    return successful_swaps_count, failed_swaps_count, total_value_delta
+
+
+def get_orders():
+    return mm2_proxy({"userpass":"$userpass","method":"my_orders"})
+
+def get_recent_swaps(limit=1000):
+    return mm2_proxy({"userpass":"$userpass","method":"my_recent_swaps","limit":limit})
+
+def get_active_swaps():
+    return mm2_proxy({"userpass":"$userpass", "method":"active_swaps", "include_status": True})
+
+def cancel_all_orders():
+    return mm2_proxy({"userpass":"$userpass","method":"cancel_all_orders","cancel_by":{"type":"All"}})

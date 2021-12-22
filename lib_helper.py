@@ -98,3 +98,22 @@ def get_mm2(branch=None):
         os.chmod('mm2', stat.S_IEXEC)
         status_print('Done!')
 
+
+def sleep_message(msg, sec):
+    status_print(msg)
+    time.sleep(sec)
+
+def preexec(): # Don't forward signals.
+    os.setpgrp()
+
+
+def get_order_count(orders):
+    if 'result' in orders:
+        if 'maker_orders' in orders['result']:
+            maker_orders = orders['result']['maker_orders']
+        if 'taker_orders' in orders['result']:
+            taker_orders = orders['result']['taker_orders']
+    else:
+        error_print(f"Error: {orders}")
+    order_count = len(maker_orders) + len(taker_orders)
+    return maker_orders, taker_orders, order_count

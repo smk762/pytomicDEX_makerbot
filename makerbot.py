@@ -27,25 +27,32 @@ def main():
         {"View Balances": lib_tui.view_balances},
         {"View Orders": lib_tui.view_orders},
         {"View Swaps": lib_tui.view_swaps},
+        {"Loop Views": lib_tui.loop_views},
         {"Exit TUI": lib_tui.exit_tui}
     ]
     while True:
-        os.system('clear')
-        print(colorize(header, 'lightgreen'))
-        print(colorize(author, 'cyan'))
-        # Add status: order count, swaps in progress, delta
         try:
-            for item in menu_items:
-                print(colorize(" [" + str(menu_items.index(item)) + "] ", 'blue') + colorize(list(item.keys())[0],'blue'))
-            choice = color_input(" Select menu option: ")
-            if int(choice) < 0:
-                raise ValueError
+            os.system('clear')
+            print(colorize(header, 'lightgreen'))
+            print(colorize(author, 'cyan'))
+            get_status()
             print("")
-            list(menu_items[int(choice)].values())[0]()
-            print("")
-            wait_continue()
-        except (ValueError, IndexError):
-            pass
+
+            try:
+                for item in menu_items:
+                    print(colorize(" [" + str(menu_items.index(item)) + "] ", 'blue') + colorize(list(item.keys())[0],'blue'))
+                choice = color_input(" Select menu option: ")
+                if int(choice) < 0:
+                    raise ValueError
+                print("")
+                list(menu_items[int(choice)].values())[0]()
+                print("")
+                wait_continue()
+            except (ValueError, IndexError):
+                pass
+        except KeyboardInterrupt:
+            lib_tui.exit_tui()
+
 
 
 

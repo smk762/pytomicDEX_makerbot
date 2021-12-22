@@ -48,6 +48,9 @@ def color_input(msg):
 def table_print(msg):
   print(colorize(msg, "cyan"))
 
+def info_print(msg):
+  print(colorize(msg, "orange"))
+
 def status_print(msg):
   print(colorize(msg, "status"))
 

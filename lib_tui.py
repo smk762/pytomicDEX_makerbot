@@ -5,10 +5,7 @@ from lib_atomicdex import *
 def start_makerbot():
     makerbot_settings = load_makerbot_settings()
     makerbot_params = load_makerbot_params()
-
-    coins_list = list(set(makerbot_settings["buy_coins"] + makerbot_settings["sell_coins"]))
-    success_print("Activating Makerbot coins...")
-    activate_coins(coins_list)
+    activate_bot_coins()
     view_makerbot_params(makerbot_params)
     # sleep for a bit so in progress orders can be kickstarted
     time.sleep(5)
@@ -41,6 +38,8 @@ def start_makerbot():
 
 
 def stop_makerbot():
+    makerbot_settings = load_makerbot_settings()
+
     params = {
         "mmrpc": "2.0",
         "method": "stop_simple_market_maker_bot",
@@ -69,6 +68,7 @@ def stop_makerbot():
             success_print(resp)
     else:
         success_print(resp)
+    cancel_all_orders()
 
 def update_makerbot():
     makerbot_params = load_makerbot_params()
@@ -101,7 +101,8 @@ def update_makerbot():
             if q.lower() == 'c':
                 return
         update_makerbot_pair(pair)
-    error_print(f"Note: You need to stop and restart the Makerbot before these settings take effect!")
+    if q.lower() != "r":
+        error_print(f"Note: You need to stop and restart the Makerbot before these settings take effect!")
     # stop makerbot
     # wait for loop to end (add timer)
     # restart makerbot
