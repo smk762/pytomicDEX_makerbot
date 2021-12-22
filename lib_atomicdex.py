@@ -266,19 +266,22 @@ def get_balances_table(coins_list=None, current_prices=None):
             params = {"userpass":"$userpass","method":"my_balance","coin":coin}
             if len(params) > 0:
                 resp = mm2_proxy(params)
-                price = get_price(coin, current_prices)
-                total_balance = float(resp['balance'])+float(resp['unspendable_balance'])
-                value = round(total_balance * price, 2)
-                total_value += value
-                table_print('|{:^16s}|{:^24f}|{:^24f}|{:^24f}|{:^58s}|{:^16s}|'.format(
-                        coin,
-                        float(resp['balance']),
-                        float(resp['unspendable_balance']),
-                        total_balance,
-                        resp['address'],
-                        f"${value}"
+                if 'balance' in resp:
+                    price = get_price(coin, current_prices)
+                    total_balance = float(resp['balance'])+float(resp['unspendable_balance'])
+                    value = round(total_balance * price, 2)
+                    total_value += value
+                    table_print('|{:^16s}|{:^24f}|{:^24f}|{:^24f}|{:^58s}|{:^16s}|'.format(
+                            coin,
+                            float(resp['balance']),
+                            float(resp['unspendable_balance']),
+                            total_balance,
+                            resp['address'],
+                            f"${value}"
+                        )
                     )
-                )
+                else:
+                    print(resp)
             else:
                 error_print(f"{coin} is not a recognised coin!")
         table_print("-"*169)
