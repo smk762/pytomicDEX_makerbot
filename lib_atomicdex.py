@@ -297,29 +297,29 @@ def get_balances_table(coins_list=None, current_prices=None):
 
 
 def view_makerbot_params(makerbot_params):
-    table_print("-"*85)
+    table_print("-"*95)
     table_print('|{:^83}|'.format(
             f"MAKERBOT SETTINGS"
         )
     )
-    table_print("-"*85)
+    table_print("-"*95)
     table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
         "PAIR",
         "SPREAD",
         "MIN USD",
         "MAX USD"
     ))
-    table_print("-"*85)
+    table_print("-"*95)
     for pair in makerbot_params['cfg']:
         cfg = makerbot_params['cfg'][pair]
-        table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
+        table_print('|{:^30}|{:^20}|{:^20}|{:^20}|'.format(
                 pair,
                 f'{round((float(cfg["spread"])-1)*100,4)}%',
                 f'{cfg["min_volume"]["usd"]}',
                 f'{cfg["max_volume"]["usd"]}'
             )
         )
-    table_print("-"*85)
+    table_print("-"*95)
     
          
 
