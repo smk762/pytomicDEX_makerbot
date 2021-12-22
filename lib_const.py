@@ -199,6 +199,7 @@ def load_makerbot_params():
 def get_makerbot_settings():
     if not os.path.exists("makerbot_settings.json"):
         status_print("\nFirst we need to set up some configs...")
+        status_print("\nDon't forget to evaluate your risk tolerance and only trade small amounts you are comforatble with.")
         create_makerbot_settings()
 
 
@@ -213,7 +214,7 @@ def load_MM2_json():
         table_print("Looks like you dont have an MM2.json file, lets create one now...")
         rpc_password = generate_rpc_pass(16)
         mm2_conf = {
-            "gui": "NN_SEED",
+            "gui": "pyMakerbot",
             "netid": 7777,
             "i_am_seed":False,
             "rpc_password": rpc_password,
@@ -236,6 +237,7 @@ def load_MM2_json():
         with open("MM2.json", "w+") as f:
             json.dump(mm2_conf, f, indent=4)
             status_print("MM2.json file created.")
+            status_print("Be sure to make a secure backup of your seed phrase offline!")
 
         with open("userpass", "w+") as f:
             f.write(f'userpass="{rpc_password}"')

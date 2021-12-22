@@ -21,10 +21,16 @@ def mm2_proxy(params):
     #print(json.dumps(params))
     try:
         r = requests.post(MM2_IP, json.dumps(params))
+        resp = r.json()
     except requests.exceptions.RequestException as e:
         start_mm2()
         r = requests.post(MM2_IP, json.dumps(params))
-    return r.json()
+        resp = r.json()
+        if "error" in resp:
+            if resp["error"].find("Userpass is invalid"):
+                error_print("MM2 is rejecting your rpc_password. Please check you are not running mm2 or AtomicDEX-Desktop app, and your rpc_password conforms to constraints in https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-setup/configure-mm2-json.html#mm2-json")
+                sys.exit()
+    return resp
 
 
 def activate_coins(coins_list):
@@ -298,12 +304,12 @@ def get_balances_table(coins_list=None, current_prices=None):
 
 def view_makerbot_params(makerbot_params):
     table_print("-"*95)
-    table_print('|{:^83}|'.format(
+    table_print('|{:^93}|'.format(
             f"MAKERBOT SETTINGS"
         )
     )
     table_print("-"*95)
-    table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
+    table_print('|{:^30}|{:^20}|{:^20}|{:^20}|'.format(
         "PAIR",
         "SPREAD",
         "MIN USD",

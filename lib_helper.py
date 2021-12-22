@@ -108,6 +108,8 @@ def preexec(): # Don't forward signals.
 
 
 def get_order_count(orders):
+    maker_orders = {}
+    taker_orders = {}
     if 'result' in orders:
         if 'maker_orders' in orders['result']:
             maker_orders = orders['result']['maker_orders']
