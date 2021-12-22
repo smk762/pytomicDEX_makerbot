@@ -112,24 +112,34 @@ def get_swaps_summary_table(limit=500):
         total_swaps = 0
         total_value_delta = 0
         # Pairs table
-        table_print("-"*57)
-        table_print('|{:^12}|{:^8}|{:^16}|{:^16}|'.format(
+        table_print("-"*96)
+        table_print('|{:^30}|{:^8}|{:^16}|{:^16}|{:^20}|'.format(
             "PAIR",
             "SWAPS",
             "SENT",
-            "RECEIVED"
+            "RECEIVED",
+            "DELTA"
         ))
-        table_print("-"*57)
+        table_print("-"*96)
         for pair in swaps_summary['pairs']:
-            table_print('|{:^12}|{:^8}|{:^16}|{:^16}|'.format(
+            base_rel = pair.split("/")
+            sent_price = get_price(base_rel[0], current_prices)
+            sent_amount = swaps_summary['pairs'][pair]["sent"]
+            sent_delta = sent_price * sent_amount
+            received_price = get_price(base_rel[1], current_prices)
+            received_amount = swaps_summary['pairs'][pair]["received"]
+            received_delta = received_price * received_amount
+            pair_delta = received_delta - sent_delta
+            table_print('|{:^30}|{:^8}|{:^16}|{:^16}|{:^20}|'.format(
                     pair,
                     swaps_summary['pairs'][pair]["swaps"],
-                    '{:16.8f}'.format(swaps_summary['pairs'][pair]["sent"]),
-                    '{:16.8f}'.format(swaps_summary['pairs'][pair]["received"])
+                    '{:16.8f}'.format(sent_amount),
+                    '{:16.8f}'.format(received_amount),
+                    "$"+'{:9.2f}'.format(round(pair_delta,2))+" USD"
                 )
             )
             total_swaps += swaps_summary['pairs'][pair]["swaps"]
-        table_print("-"*57)
+        table_print("-"*96)
         table_print("")
 
         # Coins Table
@@ -156,7 +166,7 @@ def get_swaps_summary_table(limit=500):
                     '{:16.8f}'.format(swaps_summary['coins'][coin]["received"]),
                     '{:16.8f}'.format(delta),
                     '{:16.8f}'.format(price),
-                    '{:16.8f}'.format(value_delta),
+                    "$"+'{:9.2f}'.format(round(value_delta,2))+" USD"
                 )
             )
         table_print("-"*108)
