@@ -13,6 +13,15 @@ def get_activate_command(coin):
   return requests.get(f"https://stats.kmd.io/api/atomicdex/activation_commands/?coin={coin}").json()
 
 
+def get_valid_input(msg, valid_options):
+    q = color_input(msg)
+    while q.lower() not in valid_options:
+        error_print("Invalid option, try again.")
+        q = color_input(msg)
+    return q
+
+
+
 def get_price(coin, current_prices=None):
   if not current_prices:
     current_prices = requests.get(PRICES_API).json()

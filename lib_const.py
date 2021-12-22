@@ -94,10 +94,10 @@ def get_config(base, rel, min_usd, max_usd, spread):
       "base": base,
       "rel": rel,
       "min_volume": {
-          "usd":int(min_usd)
+          "usd":float(min_usd)
       },
       "max_volume":  {
-          "usd":int(max_usd)
+          "usd":float(max_usd)
       },
 
       "spread": round(spread,4)
@@ -134,13 +134,40 @@ def create_makerbot_params(makerbot_settings):
         json.dump(params, f, ensure_ascii=False, indent=4)
 
 
-def update_makerbot_params(base, rel, min_usd, max_usd, spread):
+def update_makerbot_pair_params(base, rel, min_usd, max_usd, spread):
     makerbot_params = load_makerbot_params()
 
     config = get_config(base, rel, min_usd, max_usd, spread)
     makerbot_params["cfg"].update({
         f"{base}/{rel}": config
     })
+
+    with open('makerbot_command_params.json', 'w', encoding='utf-8') as f:
+        json.dump(makerbot_params, f, ensure_ascii=False, indent=4)
+
+
+def update_makerbot_coin_params(coin, side, min_usd, max_usd, spread):
+    makerbot_settings = load_makerbot_settings()
+    makerbot_params = load_makerbot_params()
+
+    if side == 'base':
+        base = coin
+        for rel in makerbot_settings["sell_coins"]:
+            if base != rel:
+                config = get_config(base, rel, min_usd, max_usd, spread)
+                makerbot_params["cfg"].update({
+                    f"{base}/{rel}": config
+                })
+
+    elif side == 'rel':
+        rel = coin
+        for base in makerbot_settings["buy_coins"]:
+            if base != rel:
+                config = get_config(base, rel, min_usd, max_usd, spread)
+                makerbot_params["cfg"].update({
+                    f"{base}/{rel}": config
+                })
+
 
     with open('makerbot_command_params.json', 'w', encoding='utf-8') as f:
         json.dump(makerbot_params, f, ensure_ascii=False, indent=4)

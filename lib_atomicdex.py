@@ -320,7 +320,7 @@ def view_makerbot_params(makerbot_params):
     )
     table_print("-"*95)
     table_print('|{:^30}|{:^20}|{:^20}|{:^20}|'.format(
-        "PAIR",
+        "PAIR (SELL/BUY)",
         "SPREAD",
         "MIN USD",
         "MAX USD"
@@ -372,18 +372,45 @@ def update_makerbot_pair(pair):
     spread = color_input("Enter spread percentage (e.g. 5): ")
     spread = 1+(float(spread)/100)
     reload_makerbot_settings(base_rel[0], base_rel[1])
-    update_makerbot_params(base_rel[0], base_rel[1], min_usd, max_usd, spread)
+    update_makerbot_pair_params(base_rel[0], base_rel[1], min_usd, max_usd, spread)
     load_makerbot_params()
 
 
-def reload_makerbot_settings(base, rel):
+def update_makerbot_basepair(coin):
     makerbot_settings = load_makerbot_settings()
+    buy_coins = makerbot_settings["buy_coins"]
+    status_print(f"Updating config to sell {coin} for {buy_coins}")
+    min_usd = color_input("Enter minimum trade value in USD (e.g. 10): ")
+    max_usd = color_input("Enter maximum trade value in USD (e.g. 100): ")
+    spread = color_input("Enter spread percentage (e.g. 5): ")
+    spread = 1+(float(spread)/100)
+    reload_makerbot_settings(coin, None)
+    update_makerbot_coin_params(coin, "base", min_usd, max_usd, spread)
 
-    if base not in makerbot_settings["buy_coins"]:
-        makerbot_settings["buy_coins"].append(base)
 
-    if rel not in makerbot_settings["sell_coins"]:
-        makerbot_settings["sell_coins"].append(rel)
+def update_makerbot_relpair(coin):
+    makerbot_settings = load_makerbot_settings()
+    sell_coins = makerbot_settings["sell_coins"]
+    status_print(f"Updating config to buy {coin} for {sell_coins}")
+    min_usd = color_input("Enter minimum trade value in USD (e.g. 10): ")
+    max_usd = color_input("Enter maximum trade value in USD (e.g. 100): ")
+    spread = color_input("Enter spread percentage (e.g. 5): ")
+    spread = 1+(float(spread)/100)
+    reload_makerbot_settings(None, coin)
+    update_makerbot_coin_params(coin, "rel", min_usd, max_usd, spread)
+
+
+def reload_makerbot_settings(base=None, rel=None):
+    makerbot_settings = load_makerbot_settings()
+    if base:
+        if base in makerbot_settings["buy_coins"]:
+            if rel in makerbot_settings["sell_coins"]:
+                return
+        else:
+            makerbot_settings["buy_coins"].append(base)
+    if rel:
+        if rel not in makerbot_settings["sell_coins"]:
+            makerbot_settings["sell_coins"].append(rel)
 
     with open("makerbot_settings.json", "w+") as f:
         json.dump(makerbot_settings, f, indent=4)

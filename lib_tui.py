@@ -75,14 +75,25 @@ def update_makerbot():
     view_makerbot_params(makerbot_params)
  
     # Update all or choose a pair
-    q = color_input("Update [A]ll, a [P]air or [R]eturn to menu? [A/P/R] ")
-
-    while q.lower() not in ["a", "p", "r"]:
-        error_print("Invalid option, try again.")
-        q = color_input("Update [A]ll, a [P]air or [R]eturn to menu? [A/P/R] ")
+    msg = "Update [A]ll, a [P]air, a [C]oin or [R]eturn to menu? [A/P/C/R] "
+    valid_options = ["a", "p", "c", "r"]
+    q = get_valid_input(msg, valid_options)
 
     if q.lower() == 'a':
         create_makerbot_settings()
+
+    elif q.lower() == 'c':
+        coin = color_input("Enter coin ticker: ")
+        msg = "Update coin on [S]ell side, [B]uy side, or [A]ll sides? [S/B/A] "
+        valid_options = ["s", "b", "a"]
+        q = get_valid_input(msg, valid_options)
+        if q == "s":
+            update_makerbot_basepair(coin)
+        elif q == "b":
+            update_makerbot_relpair(coin)
+        elif q == "a":
+            update_makerbot_basepair(coin)
+            update_makerbot_relpair(coin)
     
     elif q.lower() == 'p':
         pair = color_input("Enter the pair you want to update: ")
@@ -94,12 +105,14 @@ def update_makerbot():
 
         if pair not in pairs:
             error_print(f"{pair} not found in existing config!")
-            q = color_input("[A]dd new pair or [C]ancel? [A/C] ")
-            while q.lower() not in ["a", "c"]:
-                error_print("Invalid option, try again.")
-                q = color_input("[A]dd new pair or [C]ancel? [A/C] ")
+
+            msg = "[A]dd new pair or [C]ancel? [A/C] "
+            valid_options = ["a", "c"]
+            q = get_valid_input(msg, valid_options)
+
             if q.lower() == 'c':
                 return
+
         update_makerbot_pair(pair)
     if q.lower() != "r":
         error_print(f"Note: You need to stop and restart the Makerbot before these settings take effect!")
