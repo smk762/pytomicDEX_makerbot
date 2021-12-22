@@ -309,13 +309,13 @@ def view_makerbot_params(makerbot_params):
     table_print("-"*85)
     for pair in makerbot_params['cfg']:
         cfg = makerbot_params['cfg'][pair]
-    table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
-            pair,
-            f'{round((float(cfg["spread"])-1)*100,4)}%',
-            f'{cfg["min_volume"]["usd"]}',
-            f'{cfg["max_volume"]["usd"]}'
+        table_print('|{:^20}|{:^20}|{:^20}|{:^20}|'.format(
+                pair,
+                f'{round((float(cfg["spread"])-1)*100,4)}%',
+                f'{cfg["min_volume"]["usd"]}',
+                f'{cfg["max_volume"]["usd"]}'
+            )
         )
-    )
     table_print("-"*85)
     
          
