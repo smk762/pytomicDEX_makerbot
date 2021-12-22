@@ -18,3 +18,8 @@ pip3 install -r requirements.txt
 # Recommended
 
 - [Terminator](https://www.linuxshelltips.com/terminator-terminal-emulator/)
+- [AtomicDEX-API Developer Docs](https://developers.komodoplatform.com/basic-docs/atomicdex/introduction-to-atomicdex.html)
+
+# Warning
+
+Use this with small amounts you are comfortable with and be conscious of your risk tolerance. Always make a secure offline backup of your seed phrase. 
