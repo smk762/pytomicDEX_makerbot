@@ -10,7 +10,7 @@ def start_mm2(logfile='mm2_output.log'):
     mm2_output = open(logfile,'w+')
     subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True, preexec_fn=preexec)
     
-    time.sleep(1)
+    time.sleep(3)
     version = get_version()
     success_print('{:^60}'.format( "AtomicDEX-API starting."))
     success_print('{:^60}'.format( " Use 'tail -f "+logfile+"' for mm2 console messages."))

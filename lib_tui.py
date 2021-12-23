@@ -87,11 +87,11 @@ def update_makerbot():
         msg = "Update coin on [S]ell side, [B]uy side, or [A]ll sides? [S/B/A] "
         valid_options = ["s", "b", "a"]
         q = get_valid_input(msg, valid_options)
-        if q == "s":
+        if q.lower() == "s":
             update_makerbot_basepair(coin)
-        elif q == "b":
+        elif q.lower() == "b":
             update_makerbot_relpair(coin)
-        elif q == "a":
+        elif q.lower() == "a":
             update_makerbot_basepair(coin)
             update_makerbot_relpair(coin)
     
