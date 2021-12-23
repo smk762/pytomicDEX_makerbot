@@ -9,7 +9,6 @@ def start_mm2(logfile='mm2_output.log'):
         get_mm2("dev")
     mm2_output = open(logfile,'w+')
     subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True, preexec_fn=preexec)
-    
     time.sleep(3)
     version = get_version()
     success_print('{:^60}'.format( "AtomicDEX-API starting."))
@@ -279,27 +278,23 @@ def get_balances_table(coins_list=None, current_prices=None):
         table_print("-"*169)
         total_value = 0
         for coin in coins_list:
-            params = {"userpass":"$userpass","method":"my_balance","coin":coin}
-            if len(params) > 0:
-                resp = mm2_proxy(params)
-                if 'balance' in resp:
-                    price = get_price(coin, current_prices)
-                    total_balance = float(resp['balance'])+float(resp['unspendable_balance'])
-                    value = round(total_balance * price, 2)
-                    total_value += value
-                    table_print('|{:^16s}|{:^24f}|{:^24f}|{:^24f}|{:^58s}|{:^16s}|'.format(
-                            coin,
-                            float(resp['balance']),
-                            float(resp['unspendable_balance']),
-                            total_balance,
-                            resp['address'],
-                            f"${value}"
-                        )
+            resp = get_balance(coin)
+            if 'balance' in resp:
+                price = get_price(coin, current_prices)
+                total_balance = float(resp['balance']) + float(resp['unspendable_balance'])
+                value = round(total_balance * price, 2)
+                total_value += value
+                table_print('|{:^16s}|{:^24f}|{:^24f}|{:^24f}|{:^58s}|{:^16s}|'.format(
+                        coin,
+                        float(resp['balance']),
+                        float(resp['unspendable_balance']),
+                        total_balance,
+                        resp['address'],
+                        f"${value}"
                     )
-                else:
-                    print(resp)
+                )
             else:
-                error_print(f"{coin} is not a recognised coin!")
+                print(resp)
         table_print("-"*169)
         table_print('{:>151s}|{:^16s}|'.format(
                 "Total USD ",
@@ -442,27 +437,48 @@ def loop_views():
             break
 
 def get_status():
-    
+    enabled_coins = get_enabled_coins_list()
+    current_prices = requests.get(PRICES_API).json()
     maker_orders, taker_orders, order_count = get_order_count(get_orders())
     active_swaps_count = len(get_active_swaps()["uuids"])
-    successful_swaps_count, failed_swaps_count, delta = get_recent_swaps_info()
-    # Add status: order count, swaps in progress, delta
-    status_print('{:^60}'.format(
-            f"MM2 Version: {get_version()}"
-        )
-    )
-    status_print('{:^60}\n{:^60}'.format(
-            f"{(len(get_enabled_coins_list()))} Coins, {order_count} Orders active. Delta: ${round(delta,2)} USD",
-            f"Swaps: {active_swaps_count} active, {successful_swaps_count} complete, {failed_swaps_count} failed"
+    successful_swaps_count, failed_swaps_count, delta = get_recent_swaps_info(current_prices)
+    balance = get_total_balance_usd(enabled_coins, current_prices)
+
+    status_print('{:^60}\n{:^60}\n{:^60}\n{:^60}'.format(
+            f"MM2 Version: {get_version()}",
+            f"Swaps: {active_swaps_count} active, {successful_swaps_count} complete, {failed_swaps_count} failed",
+            f"Delta: ${round(delta,2)} USD. Balance: ${round(balance,2)} USD",
+            f"{(len(enabled_coins))} Coins, {order_count} Orders active.",
         )
     )
 
-def get_recent_swaps_info():
+def get_total_balance_usd(enabled_coins=None, current_prices=None):
+    if not enabled_coins:
+        enabled_coins = get_enabled_coins_list()
+    if not current_prices:
+        current_prices = requests.get(PRICES_API).json()
+
+    total_balance_usd = 0
+    for coin in enabled_coins:
+        resp = get_balance(coin)
+        if 'balance' in resp:
+            price = get_price(coin, current_prices)
+            coin_balance = float(resp['balance']) + float(resp['unspendable_balance'])
+            total_balance_usd += coin_balance
+    return round(total_balance_usd,2)
+
+
+
+def get_recent_swaps_info(current_prices=None):
+    if not current_prices:
+        current_prices = requests.get(PRICES_API).json()
+        
     total_value_delta = 0
     failed_swaps_count = 0
     successful_swaps_count = 0
-    my_recent_swaps = get_recent_swaps()
+    my_recent_swaps = get_recent_swaps()    
     swaps_summary = {"coins":{}}
+
     for swap in my_recent_swaps["result"]["swaps"]:
         include_swap = True
 
@@ -490,7 +506,6 @@ def get_recent_swaps_info():
             swaps_summary['coins'][my_coin]["sent"] += my_amount
             swaps_summary['coins'][other_coin]["received"] += other_amount
 
-    current_prices = requests.get(PRICES_API).json()
 
     for coin in swaps_summary['coins']:
         delta = swaps_summary['coins'][coin]["received"] - swaps_summary['coins'][coin]["sent"]
@@ -511,3 +526,6 @@ def get_active_swaps():
 
 def cancel_all_orders():
     return mm2_proxy({"userpass":"$userpass","method":"cancel_all_orders","cancel_by":{"type":"All"}})
+
+def get_balance(coin):
+    return mm2_proxy({"userpass":"$userpass","method":"my_balance","coin":coin})

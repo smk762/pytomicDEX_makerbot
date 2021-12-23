@@ -34,7 +34,7 @@ def main():
         try:
             os.system('clear')
             print(colorize(header, 'lightgreen'))
-            print(colorize(author, 'cyan'))
+            #print(colorize(author, 'cyan'))
             get_status()
             print("")
 
