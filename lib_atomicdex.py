@@ -408,7 +408,7 @@ def reload_makerbot_settings(base=None, rel=None):
     elif rel:
         if rel not in makerbot_settings["sell_coins"]:
             makerbot_settings["sell_coins"].append(rel)
-    
+
     with open("makerbot_settings.json", "w+") as f:
         json.dump(makerbot_settings, f, indent=4)
 
@@ -466,7 +466,7 @@ def get_total_balance_usd(enabled_coins=None, current_prices=None):
         if 'balance' in resp:
             price = get_price(coin, current_prices)
             coin_balance = float(resp['balance']) + float(resp['unspendable_balance'])
-            total_balance_usd += coin_balance
+            total_balance_usd += coin_balance * price
     return round(total_balance_usd,2)
 
 
