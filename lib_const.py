@@ -152,7 +152,7 @@ def update_makerbot_coin_params(coin, side, min_usd, max_usd, spread):
 
     if side == 'base':
         base = coin
-        for rel in makerbot_settings["sell_coins"]:
+        for rel in makerbot_settings["buy_coins"]:
             if base != rel:
                 config = get_config(base, rel, min_usd, max_usd, spread)
                 makerbot_params["cfg"].update({
@@ -161,7 +161,7 @@ def update_makerbot_coin_params(coin, side, min_usd, max_usd, spread):
 
     elif side == 'rel':
         rel = coin
-        for base in makerbot_settings["buy_coins"]:
+        for base in makerbot_settings["sell_coins"]:
             if base != rel:
                 config = get_config(base, rel, min_usd, max_usd, spread)
                 makerbot_params["cfg"].update({
