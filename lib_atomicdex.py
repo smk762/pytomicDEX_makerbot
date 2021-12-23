@@ -474,7 +474,7 @@ def get_total_balance_usd(enabled_coins=None, current_prices=None):
 def get_recent_swaps_info(current_prices=None):
     if not current_prices:
         current_prices = requests.get(PRICES_API).json()
-        
+
     total_value_delta = 0
     failed_swaps_count = 0
     successful_swaps_count = 0
@@ -517,17 +517,59 @@ def get_recent_swaps_info(current_prices=None):
     return successful_swaps_count, failed_swaps_count, total_value_delta
 
 
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_orders.html
 def get_orders():
     return mm2_proxy({"userpass":"$userpass","method":"my_orders"})
 
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_recent_swaps.html
 def get_recent_swaps(limit=1000):
     return mm2_proxy({"userpass":"$userpass","method":"my_recent_swaps","limit":limit})
 
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/active_swaps.html
 def get_active_swaps():
     return mm2_proxy({"userpass":"$userpass", "method":"active_swaps", "include_status": True})
 
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/cancel_all_orders.html
 def cancel_all_orders():
     return mm2_proxy({"userpass":"$userpass","method":"cancel_all_orders","cancel_by":{"type":"All"}})
 
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_balance.html
 def get_balance(coin):
     return mm2_proxy({"userpass":"$userpass","method":"my_balance","coin":coin})
+
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-20/withdraw.html
+def withdraw(coin, amount, address):
+    if amount == "MAX":
+        return mm2_proxy({"mmrpc":"2.0","method":"withdraw","params":{"coin":coin,"to":address,"max":True},"id":0})
+    else:
+        return mm2_proxy({"userpass":"$userpass","mmrpc":"2.0","method":"withdraw","params":{"coin":coin,"to":address,"amount":amount},"id":0})
+
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/send_raw_transaction.html
+def send_raw_tx(coin, tx_hex):
+    return mm2_proxy({"method":"send_raw_transaction","coin":coin,"tx_hex":tx_hex})
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/validateaddress.html
+def validate_address(coin, address):
+    return mm2_proxy({"method":"validateaddress","coin":coin,"address":address})
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/validateaddress.html
+def is_address_valid(coin, address):
+    return validate_address(coin, address)["result"]["is_valid"]
+
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/validateaddress.html
+def validate_withdraw_amount(amount):
+    if amount in ["MAX", "max"]:
+        return "MAX"
+    else:
+        try:
+            return float(amount)
+        except:
+            return False
+    
+

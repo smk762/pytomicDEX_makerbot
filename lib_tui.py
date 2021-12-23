@@ -138,6 +138,42 @@ def view_orders():
 def view_swaps():
     get_swaps_summary_table()
 
+def withdraw_funds():
+    enabled_coins = get_enabled_coins_list()
+    get_balances_table(enabled_coins)
+    if len(enabled_coins) > 0:
+        coin = color_input("Enter the ticker of the coin you want to withdraw: ")
+        while coin not in enabled_coins:
+            error_print(f"{coin} is not enabled. Options are |{'|'.join(enabled_coins)}|, try again.")
+            coin = color_input("Enter the ticker of the coin you want to withdraw: ")
+
+        amount = color_input(f"Enter the amount of {coin} you want to withdraw, or 'MAX' to withdraw full balance: ")
+        amount = validate_withdraw_amount(amount)
+        while not amount:
+            error_print(f"{amount} is not 'MAX' or a valid numeric value, try again.")
+            amount = color_input(f"Enter the amount of {coin} you want to withdraw, or 'MAX' to withdraw full balance: ")    
+            amount = validate_withdraw_amount(amount)
+
+        address = color_input(f"Enter the destination address: ")
+        while not is_address_valid(coin, address):
+            error_print(f"{address} is not a valid {coin} address, try again.")
+            address = color_input(f"Enter the destination address: ")
+            
+        resp = withdraw(coin, amount, address)
+        if "error" in resp:
+            error_print(resp)
+        elif "result" in resp:
+            if "tx_hex" in resp["result"]:
+                send_resp = send_raw_tx(coin, resp["result"]["tx_hex"])
+                if 'tx_hash' in send_resp:
+                    success_print(f"{amount} {coin} sent to {address}. TXID: {send_resp['tx_hash']}")
+                else:
+                    error_print(send_resp)
+            else:
+                error_print(resp)
+        else:
+            error_print(resp)
+
 
 def exit_tui():
     q = color_input("Stop AtomicDEX-API on exit? [Y/N]: ")

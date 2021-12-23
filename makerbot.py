@@ -28,6 +28,7 @@ def main():
         {"View Orders": lib_tui.view_orders},
         {"View Swaps": lib_tui.view_swaps},
         {"Loop Views": lib_tui.loop_views},
+        {"Withdraw Funds": lib_tui.withdraw_funds},
         {"Exit TUI": lib_tui.exit_tui}
     ]
     while True:
