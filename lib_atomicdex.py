@@ -442,8 +442,8 @@ def get_status():
     enabled_coins = get_enabled_coins_list()
     current_prices = requests.get(PRICES_API).json()
     maker_orders, taker_orders, order_count = get_order_count(get_orders())
-    active_swaps_count = len(get_active_swaps()["uuids"])
     successful_swaps_count, failed_swaps_count, delta = get_recent_swaps_info(current_prices)
+    active_swaps_count = len(get_active_swaps()["uuids"])
     balance = get_total_balance_usd(enabled_coins, current_prices)
 
     status_print('{:^60}\n{:^60}\n{:^60}\n{:^60}'.format(
@@ -491,7 +491,9 @@ def get_recent_swaps_info(current_prices=None):
                 break
 
         if include_swap:
-            successful_swaps_count += 1
+            for event in swap["events"]:
+                if event["event"]["type"] == "Finished":
+                    successful_swaps_count += 1
             my_coin = swap["my_info"]["my_coin"]
             my_amount = float(swap["my_info"]["my_amount"])
             other_coin = swap["my_info"]["other_coin"]
