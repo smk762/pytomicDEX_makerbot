@@ -189,8 +189,8 @@ def create_makerbot_settings():
         refresh_rate = color_input("How often to update prices in seconds (e.g. 180): ")
 
         makerbot_settings = {
-            "sell_coins": sell_coins.split(" "),
-            "buy_coins": buy_coins.split(" "),
+            "sell_coins": list(set(sell_coins.split(" "))),
+            "buy_coins": list(set(buy_coins.split(" "))),
             "default_min_usd": int(min_usd),
             "default_max_usd": int(max_usd),
             "default_spread": 1+(float(spread)/100),

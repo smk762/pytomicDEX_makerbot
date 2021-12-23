@@ -397,16 +397,18 @@ def update_makerbot_relpair(coin):
 
 def reload_makerbot_settings(base=None, rel=None):
     makerbot_settings = load_makerbot_settings()
-    if base:
-        if base in makerbot_settings["buy_coins"]:
-            if rel in makerbot_settings["sell_coins"]:
-                return
-        else:
+    if base and rel:
+        if base not in makerbot_settings["buy_coins"]:
             makerbot_settings["buy_coins"].append(base)
-    if rel:
         if rel not in makerbot_settings["sell_coins"]:
             makerbot_settings["sell_coins"].append(rel)
-
+    elif base:
+        if base not in makerbot_settings["buy_coins"]:
+            makerbot_settings["buy_coins"].append(base)
+    elif rel:
+        if rel not in makerbot_settings["sell_coins"]:
+            makerbot_settings["sell_coins"].append(rel)
+    
     with open("makerbot_settings.json", "w+") as f:
         json.dump(makerbot_settings, f, indent=4)
 
