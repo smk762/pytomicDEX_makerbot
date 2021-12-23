@@ -226,7 +226,7 @@ def load_makerbot_params():
 def get_makerbot_settings():
     if not os.path.exists("makerbot_settings.json"):
         status_print("\nFirst we need to set up some configs...")
-        status_print("\nDon't forget to evaluate your risk tolerance and only trade small amounts you are comforatble with.")
+        status_print("\nDon't forget to evaluate your risk tolerance and only trade small amounts you are comfortable with.")
         create_makerbot_settings()
 
 
