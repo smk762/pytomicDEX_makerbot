@@ -18,6 +18,9 @@ pip3 install -r requirements.txt
 # Recommended
 
 - [Terminator](https://www.linuxshelltips.com/terminator-terminal-emulator/)
+- [Komodo Platform](https://komodoplatform.com/)
+- [AtomicDEX GUI (Desktop and mobile)](https://www.atomicdex.io/)
+- [AtomicDEX API Repository](https://github.com/KomodoPlatform/atomicDEX-API/)
 - [AtomicDEX-API Developer Docs](https://developers.komodoplatform.com/basic-docs/atomicdex/introduction-to-atomicdex.html)
 
 # Warning
