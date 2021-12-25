@@ -10,7 +10,6 @@ def start_mm2(logfile='mm2_output.log'):
     mm2_output = open(logfile,'w+')
     subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True, preexec_fn=preexec)
     time.sleep(3)
-    version = get_version()
     success_print('{:^60}'.format( "AtomicDEX-API starting."))
     success_print('{:^60}'.format( " Use 'tail -f "+logfile+"' for mm2 console messages."))
 
@@ -338,7 +337,7 @@ def view_makerbot_params(makerbot_params):
 def get_version():
     params = {"method":"version"}
     resp = mm2_proxy(params)
-    return resp["result"]
+    return resp
 
 
 def stop_mm2():
@@ -447,7 +446,7 @@ def get_status():
     balance = get_total_balance_usd(enabled_coins, current_prices)
 
     status_print('{:^60}\n{:^60}\n{:^60}\n{:^60}'.format(
-            f"MM2 Version: {get_version()}",
+            f"MM2 Version: {get_version()['result']}",
             f"Swaps: {active_swaps_count} active, {successful_swaps_count} complete, {failed_swaps_count} failed",
             f"Delta: ${round(delta,2)} USD. Balance: ${round(balance,2)} USD",
             f"{(len(enabled_coins))} Coins, {order_count} Orders active.",
@@ -521,35 +520,38 @@ def get_recent_swaps_info(current_prices=None):
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_orders.html
 def get_orders():
-    return mm2_proxy({"userpass":"$userpass","method":"my_orders"})
+    return mm2_proxy({"method":"my_orders"})
 
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_recent_swaps.html
 def get_recent_swaps(limit=1000):
-    return mm2_proxy({"userpass":"$userpass","method":"my_recent_swaps","limit":limit})
+    return mm2_proxy({"method":"my_recent_swaps","limit":limit})
 
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/active_swaps.html
 def get_active_swaps():
-    return mm2_proxy({"userpass":"$userpass", "method":"active_swaps", "include_status": True})
+    return mm2_proxy({"method":"active_swaps", "include_status": True})
 
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/cancel_all_orders.html
 def cancel_all_orders():
-    return mm2_proxy({"userpass":"$userpass","method":"cancel_all_orders","cancel_by":{"type":"All"}})
+    return mm2_proxy({"method":"cancel_all_orders","cancel_by":{"type":"All"}})
 
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_balance.html
 def get_balance(coin):
-    return mm2_proxy({"userpass":"$userpass","method":"my_balance","coin":coin})
+    return mm2_proxy({"method":"my_balance","coin":coin})
 
+# https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_balance.html
+def disable_coin(coin):
+    return mm2_proxy({"method":"disable_coin","coin":coin})
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-20/withdraw.html
 def withdraw(coin, amount, address):
     if amount == "MAX":
         return mm2_proxy({"mmrpc":"2.0","method":"withdraw","params":{"coin":coin,"to":address,"max":True},"id":0})
     else:
-        return mm2_proxy({"userpass":"$userpass","mmrpc":"2.0","method":"withdraw","params":{"coin":coin,"to":address,"amount":amount},"id":0})
+        return mm2_proxy({"mmrpc":"2.0","method":"withdraw","params":{"coin":coin,"to":address,"amount":amount},"id":0})
 
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/send_raw_transaction.html
