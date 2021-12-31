@@ -243,6 +243,7 @@ def load_MM2_json():
         mm2_conf = {
             "gui": "pyMakerbot",
             "netid": 7777,
+            "rpcport": 7763,
             "i_am_seed":False,
             "rpc_password": rpc_password,
             "userhome": "/${HOME#\"/\"}"
@@ -311,7 +312,7 @@ if OP_SYS == "Windows":
 # Load or create MM2.json
 MM2_JSON = load_MM2_json()
 MM2_USERPASS = MM2_JSON["rpc_password"]
-MM2_IP = "http://127.0.0.1:7783"
+MM2_IP = "http://127.0.0.1:7763"
 
 # Get coins file if needed
 get_coins_file()

@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 parts = line.split(' ')
                 row = ''
                 for part in parts:
-                    if part.find('.') == -1:
+                    if part.find('~') == -1:
                         row += colorize(part, 'blue')
                     else:
                         row += colorize(part, 'black')
