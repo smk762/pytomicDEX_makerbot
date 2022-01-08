@@ -33,6 +33,8 @@ def mm2_proxy(params):
 
 def activate_coins(coins_list):
     for coin in coins_list:
+        if coin == 'TKL':
+            coin = 'TOKEL'
         activated = False
         for protocol in ACTIVATE_COMMANDS:
             if coin in ACTIVATE_COMMANDS[protocol]:
@@ -47,6 +49,14 @@ def activate_coins(coins_list):
                 activated = True
         if not activated:
             error_print(f"Launch params not found for {coin}!")
+
+
+def get_activation_command(coin):
+    activation_command = None
+    for protocol in ACTIVATE_COMMANDS:
+        if coin in ACTIVATE_COMMANDS[protocol]:
+            activation_command = ACTIVATE_COMMANDS[protocol][coin]
+    return activation_command
 
 
 # Documentation reference: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-api-legacy/my_recent_swaps.html
