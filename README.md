@@ -24,6 +24,12 @@ pip3 install -r requirements.txt
 - [AtomicDEX API Repository](https://github.com/KomodoPlatform/atomicDEX-API/)
 - [AtomicDEX-API Developer Docs](https://developers.komodoplatform.com/basic-docs/atomicdex/introduction-to-atomicdex.html)
 
+
+# Walkthrough
+
+[![Watch the video](https://user-images.githubusercontent.com/35845239/147961225-ec910ec2-7c73-47d1-afc0-3033958e50cc.png)](https://odysee.com/@Dragonhound:7/pytomicDEX-makerbot:8)
+
+
 # Warning
 
 Use this with small amounts you are comfortable with and be conscious of your risk tolerance. Always make a secure offline backup of your seed phrase. 
