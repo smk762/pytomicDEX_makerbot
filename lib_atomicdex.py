@@ -243,7 +243,7 @@ def output_order_lines(ordertype, orders, current_prices=None):
         sell_price_cex = get_price(sell_coin, current_prices)
         buy_price_cex = get_price(buy_coin, current_prices)
 
-        if sell_price_cex == 0
+        if sell_price_cex == 0:
             cancel_all_orders(sell_coin)
 
         elif buy_price_cex == 0:
