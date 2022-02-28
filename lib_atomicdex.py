@@ -243,24 +243,31 @@ def output_order_lines(ordertype, orders, current_prices=None):
         sell_price_cex = get_price(sell_coin, current_prices)
         buy_price_cex = get_price(buy_coin, current_prices)
 
-        cex_price_ratio = sell_price_cex/buy_price_cex 
-        pct_vs_cex = round((sell_price_wrt_rel/cex_price_ratio-1)*100,3)
-        sell_price_usd = sell_price_cex*(1+pct_vs_cex/100)
-        updated = orders[uuid]['updated_at']
-        since = sec_to_hms(int(time.time()) - int(updated)/1000) 
-        table_print('|{:^7}|{:^38}|{:^12}|{:^12}|{:^16}|{:^16}|{:^16}|{:^16}|{:^10}|{:^15}|'.format(
-                ordertype,
-                uuid,
-                sell_coin,
-                buy_coin,
-                '{:16.8f}'.format(sell_amount),
-                '{:16.8f}'.format(buy_amount),
-                '{:10.2f}'.format(sell_price_usd),
-                '{:10.2f}'.format(sell_price_cex),
-                '{:6.2f}%'.format(pct_vs_cex),
-                since
+        if sell_price_cex == 0
+            cancel_all_orders(sell_coin)
+
+        elif buy_price_cex == 0:
+            cancel_all_orders(buy_coin)
+
+        else:
+            cex_price_ratio = sell_price_cex/buy_price_cex
+            pct_vs_cex = round((sell_price_wrt_rel/cex_price_ratio-1)*100,3)
+            sell_price_usd = sell_price_cex*(1+pct_vs_cex/100)
+            updated = orders[uuid]['updated_at']
+            since = sec_to_hms(int(time.time()) - int(updated)/1000)
+            table_print('|{:^7}|{:^38}|{:^12}|{:^12}|{:^16}|{:^16}|{:^16}|{:^16}|{:^10}|{:^15}|'.format(
+                    ordertype,
+                    uuid,
+                    sell_coin,
+                    buy_coin,
+                    '{:16.8f}'.format(sell_amount),
+                    '{:16.8f}'.format(buy_amount),
+                    '{:10.2f}'.format(sell_price_usd),
+                    '{:10.2f}'.format(sell_price_cex),
+                    '{:6.2f}%'.format(pct_vs_cex),
+                    since
+                )
             )
-        )
 
 
 # Documentation: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-api-legacy/my_balance.html
@@ -544,7 +551,9 @@ def get_active_swaps():
 
 
 # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/cancel_all_orders.html
-def cancel_all_orders():
+def cancel_all_orders(coin=None):
+    if coin:
+        return mm2_proxy({"method":"cancel_all_orders","cancel_by":{"type":"Coin", "data":{"ticker":coin}}})
     return mm2_proxy({"method":"cancel_all_orders","cancel_by":{"type":"All"}})
 
 
