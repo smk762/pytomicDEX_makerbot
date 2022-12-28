@@ -77,7 +77,7 @@ def get_release_assets_info(org, repo):
 
 def get_mm2(branch=None):
 
-    if not branch:
+    if not branch or branch == "mm2.1":
         # Get latest release
         assets = get_release_assets_info("komodoplatform", "atomicdex-api")
 
@@ -92,7 +92,7 @@ def get_mm2(branch=None):
         status_print(f"WARNING: This will download the latest {branch} build of the AtomicDEX-API (mm2)")
         wait_continue()
         short_hash = get_short_hash("komodoplatform", "atomicdex-api", branch)
-        asset_name = f"mm2-{short_hash}-{OP_SYS}-Release.zip"
+        asset_name = f"mm2-{short_hash}-{OP_SYS}-CI.zip"
         asset_url = f"http://195.201.0.6/{branch}/{asset_name}"
 
     if not os.path.exists(asset_name):

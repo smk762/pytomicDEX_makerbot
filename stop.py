@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from lib_atomicdex import *
+from lib_atomicdex import stop_mm2
 
 resp = stop_mm2()
 if 'error' in resp:
