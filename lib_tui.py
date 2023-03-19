@@ -126,6 +126,23 @@ def activate_coins_tui():
     activate_coins(coins_list)
 
 
+def task_id_status_tui():
+    task_ids = list(ACTIVE_TASKS.values())
+    if len(task_ids) == 0:
+        error_print(f"No active tasks!")
+    try:
+        task_id = int(color_input(f"Select from active tasks {task_ids}: "))
+    except Exception as e:
+        error_print(f"task_id must be an integer!")
+        return
+    if task_id not in task_ids:
+        error_print(f"{task_id} not found in active tasks!")
+    else:
+        for method, task in ACTIVE_TASKS.items():
+            if task_id == task:
+                success_print(get_task(method, task_id))
+
+
 def view_balances():
     coins_list = get_enabled_coins_list()
     get_balances_table(coins_list)

@@ -21,7 +21,6 @@ def get_valid_input(msg, valid_options):
     return q
 
 
-
 def get_price(coin, current_prices=None):
   if not current_prices:
     current_prices = requests.get(PRICES_API).json()

@@ -24,6 +24,7 @@ def main():
         {"View/Update Makerbot": lib_tui.update_makerbot},
         {"Stop Makerbot": lib_tui.stop_makerbot},
         {"Activate Coins": lib_tui.activate_coins_tui},
+        {"Get Task ID Status": lib_tui.task_id_status_tui},
         {"View Balances": lib_tui.view_balances},
         {"View Orders": lib_tui.view_orders},
         {"View Swaps": lib_tui.view_swaps},

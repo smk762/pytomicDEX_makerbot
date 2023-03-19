@@ -40,7 +40,16 @@ def activate_coins(coins_list):
             if coin in ACTIVATE_COMMANDS[protocol]:
                 resp = mm2_proxy(ACTIVATE_COMMANDS[protocol][coin])
                 if "result" in resp:
-                    status_print(f"{resp['coin']} activated. Balance: {resp['balance']}")
+                    if "balance" in resp["result"]:
+                        status_print(f"{coin} activated. Balance: {resp['balance']}")
+                    elif "task_id" in resp["result"]:
+                        status_print(f"{coin} activated. Task ID: {resp['result']['task_id']}")
+                        if coin in ["ARRR", "ZOMBIE"]:
+                            ACTIVE_TASKS.update({"task::enable_z_coin::status": resp['result']['task_id']})
+                        else:
+                            ACTIVE_TASKS.update({"unknown": resp['result']['task_id']})
+                    else:
+                        status_print(f"{coin} is activating. Response: {resp['result']}")
                 elif "error" in resp:
                     if resp["error"].find("already initialized") >= 0:
                         status_print(f"{coin} was already activated.")
@@ -349,6 +358,19 @@ def view_makerbot_params(makerbot_params):
     table_print("-"*95)
     
          
+
+
+def get_task(method, task_id):
+    params = {
+    "method": method,
+    "mmrpc": "2.0",
+    "params": {
+            "task_id": task_id,
+            "forget_if_finished": False
+        }
+    }
+    resp = mm2_proxy(params)
+    return resp
 
 
 def get_version():
