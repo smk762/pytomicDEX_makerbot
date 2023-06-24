@@ -290,7 +290,16 @@ def get_coins_file():
 HOME = expanduser("~")
 SCRIPT_PATH = sys.path[0]
 PRICES_API = "https://prices.cipig.net:1717/api/v2/tickers?expire_at=600"
-ACTIVATE_COMMANDS = requests.get("http://stats.kmd.io/api/atomicdex/activation_commands/").json()["commands"]
+try:
+    ACTIVATE_COMMANDS = requests.get("http://stats.kmd.io/api/atomicdex/activation_commands/").json()["commands"]
+    with open("activate_commands.json", "w+") as f:
+        json.dump(ACTIVATE_COMMANDS, f, indent=4)
+except:
+    if os.exists("activate_commands.json"):
+        ACTIVATE_COMMANDS = json.load(open("activate_commands.json", "r"))
+    else:
+        error_print("Unable to load activation commands, please check your internet connection, or report this to smk on Discord.")
+        sys.exit()
 ACTIVE_TASKS = {}
 
 ERROR_EVENTS = [

@@ -10,7 +10,9 @@ def sec_to_hms(sec):
 
 
 def get_activate_command(coin):
-  return requests.get(f"https://stats.kmd.io/api/atomicdex/activation_commands/?coin={coin}").json()
+    for protocol in ACTIVATE_COMMANDS:
+        if coin in ACTIVATE_COMMANDS[protocol]:
+            return ACTIVATE_COMMANDS[protocol][coin]
 
 
 def get_valid_input(msg, valid_options):
