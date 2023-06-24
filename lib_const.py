@@ -314,10 +314,12 @@ OP_SYS = platform.system()
 if OP_SYS not in VALID_OP_SYS:
     error_print(f"Invalid OS, must be in {VALID_OP_SYS}")
     sys.exit()
-if OP_SYS == "Windows":
-    OP_SYS = "Windows_NT"
-    error_print(f"Windows is not currently supported, but you can try using WSL.\n See https://docs.microsoft.com/en-us/windows/wsl/install")
-    sys.exit()
+
+if OP_SYS.lower() == "windows":
+    MM2BIN = "mm2.exe"
+else:
+    MM2BIN = "./mm2"
+
 
 # Load or create MM2.json
 MM2_JSON = load_MM2_json()

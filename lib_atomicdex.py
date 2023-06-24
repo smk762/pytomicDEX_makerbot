@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import platform
 import subprocess
 from lib_helper import *
 
@@ -6,9 +7,9 @@ from lib_helper import *
 def start_mm2(logfile='mm2_output.log'):
     if not os.path.isfile('mm2'):
         error_print("\nmm2 binary not found in "+SCRIPT_PATH+"!")
-        get_mm2("dev")
+        get_mm2()
     mm2_output = open(logfile,'w+')
-    subprocess.Popen(["./mm2"], stdout=mm2_output, stderr=mm2_output, universal_newlines=True, preexec_fn=preexec)
+    subprocess.Popen([MM2BIN], stdout=mm2_output, stderr=mm2_output, universal_newlines=True, preexec_fn=preexec)
     time.sleep(3)
     success_print('{:^60}'.format( "AtomicDEX-API starting."))
     success_print('{:^60}'.format( " Use 'tail -f "+logfile+"' for mm2 console messages."))
