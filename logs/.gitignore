@@ -1,0 +1,13 @@
+# Custom
+mm2*
+*.zip
+*.tar.gz
+*.log
+coins
+*.json
+.env
+libmm2*
+*.csv
+userpass*
+DB/
+old/
