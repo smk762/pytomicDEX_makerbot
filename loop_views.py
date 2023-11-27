@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-from lib_atomicdex import *
+from models import MakerBot, Table
 
-activate_bot_coins()
-loop_views()
+bot = MakerBot()
+table = Table()
+bot.activate_bot_coins()
+table.loop_views()
