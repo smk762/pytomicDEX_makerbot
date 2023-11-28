@@ -49,7 +49,7 @@ class Dex:
             return True
         except:
             return False
-    
+
     def start(self):
         if not self.is_running:
             os.environ["MM_CONF_PATH"] = self.mm2_config
@@ -67,7 +67,9 @@ class Dex:
             time.sleep(3)
             success_print("{:^60}".format(" Komodo DeFi Framework starting."))
             success_print(
-                "{:^60}".format(f" Use 'tail -f {self.mm2_log}' for mm2 console messages.")
+                "{:^60}".format(
+                    f" Use 'tail -f {self.mm2_log}' for mm2 console messages."
+                )
             )
 
     def mm2_proxy(self, params):
@@ -294,8 +296,7 @@ class Dex:
     def is_address_valid(self, coin, address):
         return self.validate_address(coin, address)["result"]["is_valid"]
 
-    # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/validateaddress.html
-    def validate_withdraw_amount(amount):
+    def validate_withdraw_amount(self, amount):
         if amount in ["MAX", "max"]:
             return "MAX"
         else:
@@ -330,7 +331,9 @@ class MakerBot:
         # sleep for a bit so in progress orders can be kickstarted
         time.sleep(5)
         pair_count = len(self.params["cfg"])
-        resp = self.dex.api.rpc("start_simple_market_maker_bot", self.params, v2=True).json()
+        resp = self.dex.api.rpc(
+            "start_simple_market_maker_bot", self.params, v2=True
+        ).json()
         if "result" in resp:
             if "result" in resp["result"]:
                 if resp["result"]["result"] == "Success":
@@ -387,7 +390,7 @@ class MakerBot:
 
     def reset_config(self):
         self.config.init_bot_params(True)
-        
+
     def update(self):
         # Update all or choose a pair
         msg = "Update [A]ll, a [P]air, a [C]oin or [R]eturn to menu? [A/P/C/R] "
@@ -528,8 +531,7 @@ class Table:
             table_print("-" * 108)
             for coin in summary["coins"]:
                 delta = (
-                    summary["coins"][coin]["received"]
-                    - summary["coins"][coin]["sent"]
+                    summary["coins"][coin]["received"] - summary["coins"][coin]["sent"]
                 )
                 price = get_price(coin, current_prices)
                 value_delta = round(price * delta, 2)
@@ -862,7 +864,6 @@ class Config:
                 f.write(f'userpass="{rpc_password}"')
                 status_print("userpass file created.")
 
-
     def get_config(self, base, rel, min_usd, max_usd, spread):
         config_template = {
             "base": "base_coin",
@@ -970,6 +971,7 @@ class Config:
 table = Table()
 dex = Dex()
 
+
 class Tui:
     def __init__(self):
         self.config = Config()
@@ -979,23 +981,25 @@ class Tui:
         self.bot = MakerBot()
         self.table = Table()
         self.dex.start()
-        
+
     def start_makerbot(self):
-        self.bot.start()        
+        self.bot.start()
 
     def update_makerbot(self):
         self.bot.update()
 
     def reset_makerbot_config(self):
         self.bot.reset_config()
-    
+
     def stop_makerbot(self):
         self.bot.stop()
-            
+
     def activate_coins_tui(self):
         while True:
             try:
-                coins = color_input("Enter the tickers you want to activate: ").split(" ")
+                coins = color_input("Enter the tickers you want to activate: ").split(
+                    " "
+                )
                 if isinstance(coins, list):
                     dex.activate_coins(coins)
                     break
@@ -1019,14 +1023,11 @@ class Tui:
                 if task_id == task:
                     success_print(dex.get_task(method, task_id))
 
-
     def view_balances(self):
         self.table.balances(self.dex.enabled_coins_list)
 
-
     def view_orders(self):
         self.table.orders(self.dex.api.orders)
-
 
     def view_swaps(self):
         self.table.swaps_summary(dex.api.rpc("my_recent_swaps").json())
@@ -1043,14 +1044,18 @@ class Tui:
                 error_print(
                     f"{coin} is not enabled. Options are |{'|'.join(enabled_coins)}|, try again."
                 )
-                coin = color_input("Enter the ticker of the coin you want to withdraw: ")
+                coin = color_input(
+                    "Enter the ticker of the coin you want to withdraw: "
+                )
 
             amount = color_input(
                 f"Enter the amount of {coin} you want to withdraw, or 'MAX' to withdraw full balance: "
             )
             amount = dex.validate_withdraw_amount(amount)
             while not amount:
-                error_print(f"{amount} is not 'MAX' or a valid numeric value, try again.")
+                error_print(
+                    f"{amount} is not 'MAX' or a valid numeric value, try again."
+                )
                 amount = color_input(
                     f"Enter the amount of {coin} you want to withdraw, or 'MAX' to withdraw full balance: "
                 )
@@ -1077,7 +1082,6 @@ class Tui:
                     error_print(resp)
             else:
                 error_print(resp)
-
 
     def exit_tui(self):
         q = color_input("Stop Komodo DeFi Framework on exit? [Y/N]: ")
