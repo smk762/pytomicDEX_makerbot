@@ -33,6 +33,7 @@ from helpers import (
     get_valid_input,
     sec_to_hms,
     generate_rpc_pass,
+    get_prices
 )
 
 
@@ -158,7 +159,7 @@ class Dex:
     @property
     def status(self):
         enabled_coins = self.enabled_coins_list
-        current_prices = requests.get(PRICES_URL).json()
+        current_prices = get_prices()
         maker_orders, taker_orders, order_count = get_order_count(self.api.orders)
         successful_swaps_count, failed_swaps_count, delta = self.get_recent_swaps_info(
             current_prices
@@ -177,7 +178,7 @@ class Dex:
         if not enabled_coins:
             enabled_coins = self.enabled_coins_list
         if not current_prices:
-            current_prices = requests.get(PRICES_URL).json()
+            current_prices = get_prices()
 
         total_balance_usd = 0
         for coin in enabled_coins:
@@ -192,7 +193,7 @@ class Dex:
 
     def get_recent_swaps_info(self, current_prices=None):
         if not current_prices:
-            current_prices = requests.get(PRICES_URL).json()
+            current_prices = get_prices()
 
         total_value_delta = 0
         failed_swaps_count = 0
@@ -487,7 +488,7 @@ class Table:
                     # print("skipping, swap failed")
                     pass
 
-            current_prices = requests.get(PRICES_URL).json()
+            current_prices = get_prices()
 
             total_swaps = 0
             total_value_delta = 0
@@ -563,7 +564,7 @@ class Table:
     # Documentation: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-api-legacy/my_orders.html
     def orders(self, orders_data, current_prices=None):
         if not current_prices:
-            current_prices = requests.get(PRICES_URL).json()
+            current_prices = get_prices()
         maker_orders, taker_orders, order_count = get_order_count(orders_data)
         if order_count == 0:
             status_print("You have no active orders...")
@@ -594,7 +595,7 @@ class Table:
 
     def output_order_lines(self, ordertype, orders, current_prices=None):
         if not current_prices:
-            current_prices = requests.get(PRICES_URL).json()
+            current_prices = get_prices()
         for uuid in orders:
             sell_coin = orders[uuid]["base"]
             buy_coin = orders[uuid]["rel"]
@@ -635,7 +636,7 @@ class Table:
     # Documentation: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-api-legacy/my_balance.html
     def balances(self, coins_list, current_prices=None):
         if not current_prices:
-            current_prices = requests.get(PRICES_URL).json()
+            current_prices = get_prices()
 
         if len(coins_list) == 0:
             status_print("You have no active coins...")

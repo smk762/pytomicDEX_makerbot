@@ -42,7 +42,8 @@ ERROR_EVENTS = [
 ]
 
 # NOTE: Users should set this to their own desired url. The URL below is for refrence only, use at your own risk.
-PRICES_URL = "https://prices.cipig.net:1717/api/v2/tickers?expire_at=600"
+#PRICES_URL = "https://prices.cipig.net:1717/api/v2/tickers?expire_at=600"
+PRICES_URL = "https://prices.komodo.earth/api/v2/tickers"
 
 BOT_SETTINGS_FILE = f"{SCRIPT_PATH}/config/bot_settings.json"
 BOT_PARAMS_FILE = f"{SCRIPT_PATH}/config/makerbot_command_params.json"
@@ -60,7 +61,7 @@ try:
     with open(f"{SCRIPT_PATH}/activate_commands.json", "w+") as f:
         json.dump(ACTIVATE_COMMANDS, f, indent=4)
 except:
-    if os.exists(f"{SCRIPT_PATH}/activate_commands.json"):
+    if os.path.exists(f"{SCRIPT_PATH}/activate_commands.json"):
         ACTIVATE_COMMANDS = json.load(
             open(f"{SCRIPT_PATH}/activate_commands.json", "r")
         )

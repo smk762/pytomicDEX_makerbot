@@ -32,7 +32,7 @@ def get_valid_input(msg, valid_options):
 
 def get_price(coin, current_prices=None):
     if not current_prices:
-        current_prices = requests.get(PRICES_URL).json()
+        current_prices = get_prices()
     if "-" in coin:
         coin = coin.split("-")[0]
     if coin in current_prices:
@@ -193,6 +193,12 @@ def error_print(msg):
 def wait_continue():
     color_input("Press [Enter] to continue...")
 
+def get_prices():
+    try:
+        return requests.get(PRICES_URL).json()
+    except Exception as e:
+        print(f"Price service at {PRICES_URL} is not responding!")
+        return {}
 
 def generate_rpc_pass(length):
     rpc_pass = ""
