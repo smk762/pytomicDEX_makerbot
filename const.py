@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import time
 import string
 import random
 import os.path
@@ -84,3 +85,7 @@ except:
         f"Unable to load {COINS_FILE}, please check your internet connection, or report this to smk on Discord."
     )
     sys.exit()
+
+with open(COINS_FILE, "r", encoding="utf-8") as f:
+    coins_data = json.load(f)
+COINS_LIST = [i["coin"] for i in coins_data if i["mm2"] == 1]

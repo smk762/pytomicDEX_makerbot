@@ -18,6 +18,7 @@ from const import (
     MM2_LOG_FILE,
     MM2BIN,
     MM2_JSON_FILE,
+    COINS_LIST
 )
 from helpers import (
     color_input,
@@ -445,6 +446,7 @@ class MakerBot:
 class Table:
     def __init__(self):
         self.config = Config()
+        self.dex = Dex()
 
     def swaps_summary(self, recent_swaps, limit=500):
         if "error" in recent_swaps:
@@ -607,10 +609,10 @@ class Table:
             buy_price_cex = get_price(buy_coin, current_prices)
 
             if sell_price_cex == 0:
-                self.cancel_all_orders(sell_coin)
+                self.dex.cancel_all_orders(sell_coin)
 
             elif buy_price_cex == 0:
-                self.cancel_all_orders(buy_coin)
+                self.dex.cancel_all_orders(buy_coin)
 
             else:
                 cex_price_ratio = sell_price_cex / buy_price_cex
@@ -774,26 +776,44 @@ class Config:
     def create_bot_settings(self):
         q = "n"
         while q.lower() == "n":
-            sell_coins = color_input(
-                "Enter tickers of coins you want to sell, seperated by a space:\n"
+            sell_coins = self.validate_list_input(
+                "Enter tickers of coins you want to sell, seperated by a space (default: KMD LTC):\n",
+                ["KMD", "LTC"],
+                set(COINS_LIST),
+                "tickers",
+                2
             )
-            buy_coins = color_input(
-                "Enter tickers of coins you want to buy, seperated by a space:\n"
+            buy_coins = self.validate_list_input(
+                "Enter tickers of coins you want to buy, seperated by a space (press enter to use same coins as above):\n",
+                sell_coins,
+                set(COINS_LIST),                
+                "tickers",
+                2
             )
-            min_usd = color_input(
-                "Enter default minimum trade value in USD (e.g. 10): "
+            min_usd = self.validate_float_input(
+                "Enter default minimum trade value in USD (default: $10): ",
+                10,
+                1
             )
-            max_usd = color_input(
-                "Enter default maximum trade value in USD (e.g. 100): "
+            max_usd = self.validate_float_input(
+                "Enter default maximum trade value in USD (default: $500): ",
+                500,
+                20
             )
-            spread = color_input("Enter default spread percentage (e.g. 5): ")
-            refresh_rate = color_input(
-                "How often to update prices in seconds (e.g. 180): "
+            spread = self.validate_float_input(
+                "Enter default spread percentage (default: 3%): ",
+                3,
+                0.01
             )
+            refresh_rate = self.validate_int_input(
+                "How often to update prices in minutes (default: 3): ",
+                3,
+                2
+            ) * 60
 
             bot_settings = {
-                "sell_coins": list(set(sell_coins.split(" "))),
-                "buy_coins": list(set(buy_coins.split(" "))),
+                "sell_coins": list(set(sell_coins)),
+                "buy_coins": list(set(buy_coins)),
                 "default_min_usd": int(min_usd),
                 "default_max_usd": int(max_usd),
                 "default_spread": 1 + (float(spread) / 100),
@@ -967,6 +987,85 @@ class Config:
 
         with open(BOT_SETTINGS_FILE, "w+") as f:
             json.dump(bot_settings, f, indent=4)
+
+    def validate_float_input(self, q=None, default=0, min=0):
+        while True:
+            try:
+                if q is None:
+                    value = default
+                else:
+                    value = color_input(q).replace("$", "").replace("%", "")
+                    if value == "":
+                        value = default
+                value = float(value)
+                if value < min:
+                    raise ValueError
+                return float(value)
+            except ValueError:
+                error_print(f"Value must be > {min}!")
+            except TypeError:
+                error_print("Value must be numeric!")
+            except KeyboardInterrupt:
+                if value is None:
+                    value = default
+                elif value == "":
+                    value = default
+                return value
+            
+
+    def validate_int_input(self, q=None, default=0, min=0):
+        while True:
+            try:
+                if q is None:
+                    value = default
+                else:
+                    value = color_input(q).replace("$", "").replace("%", "")
+                    if value == "":
+                        value = default
+                value = int(value)
+                if value < min:
+                    raise ValueError
+                return int(value)
+            except ValueError:
+                error_print(f"Value must be > {min}!")
+            except TypeError:
+                error_print("Value must be numeric!")
+            except KeyboardInterrupt:
+                if value is None:
+                    value = default
+                elif value == "":
+                    value = default
+                return value
+
+    def validate_list_input(self, q=None, default=list(), valid_options=set(), category=None, min_length=2):
+        while True:
+            try:
+                if q is None:
+                    value = default
+                else:
+                    value = color_input(q).split(" ")
+                    if value[0] == "":
+                        value = default
+                value = [i for i in value if i != '']
+                if len(value) < min_length:
+                    raise IndexError
+                if len(valid_options) > 0:
+                    invalid_options = set(value) - valid_options
+                    if len(invalid_options) != 0:
+                        raise ValueError
+                return value
+            except ValueError:
+                error_print(f"The following selections are not a valid option: {invalid_options}, try again.")
+                if category == "tickers":
+                    error_print("The valid tickers can be found at https://github.com/KomodoPlatform/coins/blob/master/utils/coins_config.json")
+            except IndexError:
+                error_print("You must select two or more tickers, try again")            
+            except KeyboardInterrupt:
+                if value is None:
+                    value = default
+                elif value[0] == "":
+                    value = default
+                return value
 
 
 table = Table()
