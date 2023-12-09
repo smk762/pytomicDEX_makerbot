@@ -92,8 +92,6 @@ class Dex:
 
     def activate_coins(self, coins_list):
         for coin in coins_list:
-            if coin == "TKL":
-                coin = "TOKEL"
             activation_params = self.get_activation_command(coin)
             if activation_params:
                 resp = self.mm2_proxy(activation_params)
