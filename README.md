@@ -1,6 +1,6 @@
 # PytomicDEX Makerbot
 
-A Terminal User Interface (TUI) for automated trading with [Komodo Platform's](https://komodoplatform.com/) [AtomicDEX-API](https://github.com/KomodoPlatform/atomicDEX-API)
+A Terminal User Interface (TUI) for automated trading with [Komodo Platform's](https://komodoplatform.com/) [Komodo DeFi Framework](https://github.com/KomodoPlatform/komodo-defi-framework)
 
 
 ![PytomicDEX-makerbot](https://user-images.githubusercontent.com/35845239/147382522-b35fa70d-60ad-41c5-a091-d864a6750cfb.png)
@@ -21,8 +21,8 @@ pip3 install -r requirements.txt
 - [Terminator](https://www.linuxshelltips.com/terminator-terminal-emulator/)
 - [Komodo Platform](https://komodoplatform.com/)
 - [AtomicDEX GUI (Desktop and mobile)](https://www.atomicdex.io/)
-- [AtomicDEX API Repository](https://github.com/KomodoPlatform/atomicDEX-API/)
-- [AtomicDEX-API Developer Docs](https://developers.komodoplatform.com/basic-docs/atomicdex/introduction-to-atomicdex.html)
+- [AtomicDEX API Repository](https://github.com/KomodoPlatform/komodo-defi-framework/)
+- [Komodo DeFi Framework Developer Docs](https://developers.komodoplatform.com/basic-docs/atomicdex/introduction-to-atomicdex.html)
 
 
 # Walkthrough

@@ -1,2 +1,3 @@
 mnemonic==0.20
-requests==2.26.0
+requests==2.31.0
+pykomodefi==0.2.3

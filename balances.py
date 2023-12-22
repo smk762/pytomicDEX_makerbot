@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-from lib_atomicdex import *
+from helpers import status_print
+from models import Dex, Tables
 
-coins_list = get_enabled_coins_list()
+dex = Dex()
+tables = Tables()
+
+coins_list = dex.enabled_coins_list
 
 if len(coins_list) == 0:
     status_print("No coins are activated!")
 else:
     # Documentation: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-api-legacy/my_balance.html
-    get_balances_table(coins_list)
-
-
+    tables.balances(coins_list)

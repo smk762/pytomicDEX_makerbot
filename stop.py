@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-from lib_atomicdex import stop_mm2
+from helpers import status_print, error_print
+from models import Dex
 
-resp = stop_mm2()
-if 'error' in resp:
+dex = Dex()
+resp = dex.quit()
+if "error" in resp:
     error_print(resp)
 elif "success" in resp:
-    status_print("AtomicDEX-API has stopped.")
+    status_print("Komodo DeFi Framework has stopped.")
