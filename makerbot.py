@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 import os
 import time
-from helpers import (
-    colorize,
-    color_input,
-    status_print,
-    wait_continue
-)
+from helpers import colorize, color_input, status_print, wait_continue
 from models import Tui
+
 tui = Tui()
-                                                             
+
 header = "\
-    _  __                     _____       ______ _                                            \n\
+     _  __                     _____       ______ _                                           \n\
     | |/ /                    |  __ \     |  ____(_)                                          \n\
     | ' / ___  _ __ ___   ___ | |  | | ___| |__   _                                           \n\
     |  < / _ \| '_ ` _ \ / _ \| |  | |/ _ \  __| | |                                          \n\
@@ -82,9 +78,9 @@ if __name__ == "__main__":
                     else:
                         row += colorize(part, "black")
                 print(row, end="")
-                # print(line, end='')
                 time.sleep(0.04)
             time.sleep(0.4)
         print("\n")
         break
+
     main()

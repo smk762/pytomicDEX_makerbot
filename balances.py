@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from helpers import status_print
-from models import Dex, Tables
+from models import Dex, Table
 
 dex = Dex()
-tables = Tables()
+tables = Table()
 
 coins_list = dex.enabled_coins_list
 
