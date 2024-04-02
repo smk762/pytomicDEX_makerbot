@@ -76,8 +76,7 @@ class Dex:
 
     def mm2_proxy(self, params):
         try:
-            r = self.api.rpc(params["method"], params)
-            resp = r.json()
+            resp = self.api.rpc(params["method"], params)
         except requests.exceptions.RequestException as e:
             self.start()
             r = self.api.rpc(params["method"], params)
@@ -333,7 +332,7 @@ class MakerBot:
         pair_count = len(self.params["cfg"])
         resp = self.dex.api.rpc(
             "start_simple_market_maker_bot", self.params, v2=True
-        ).json()
+        )
         if "result" in resp:
             if "result" in resp["result"]:
                 if resp["result"]["result"] == "Success":
