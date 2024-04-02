@@ -79,8 +79,7 @@ class Dex:
             resp = self.api.rpc(params["method"], params)
         except requests.exceptions.RequestException as e:
             self.start()
-            r = self.api.rpc(params["method"], params)
-            resp = r.json()
+            resp = self.api.rpc(params["method"], params)
             if "error" in resp:
                 if resp["error"].find("Userpass is invalid"):
                     error_print(
@@ -714,7 +713,7 @@ class Table:
                 sleep_message(msg, 10)
                 self.orders(Dex().api.orders)
                 sleep_message(msg, 10)
-                self.swaps_summary(Dex().api.rpc("my_recent_swaps").json())
+                self.swaps_summary(Dex().api.rpc("my_recent_swaps"))
                 sleep_message(msg, 10)
             except KeyboardInterrupt:
                 break
@@ -1127,7 +1126,7 @@ class Tui:
         self.table.orders(self.dex.api.orders)
 
     def view_swaps(self):
-        self.table.swaps_summary(dex.api.rpc("my_recent_swaps").json())
+        self.table.swaps_summary(dex.api.rpc("my_recent_swaps"))
 
     def loop_views(self):
         self.table.loop_views()
