@@ -76,12 +76,10 @@ class Dex:
 
     def mm2_proxy(self, params):
         try:
-            r = self.api.rpc(params["method"], params)
-            resp = r.json()
+            resp = self.api.rpc(params["method"], params)
         except requests.exceptions.RequestException as e:
             self.start()
-            r = self.api.rpc(params["method"], params)
-            resp = r.json()
+            resp = self.api.rpc(params["method"], params)
             if "error" in resp:
                 if resp["error"].find("Userpass is invalid"):
                     error_print(
@@ -333,7 +331,7 @@ class MakerBot:
         pair_count = len(self.params["cfg"])
         resp = self.dex.api.rpc(
             "start_simple_market_maker_bot", self.params, v2=True
-        ).json()
+        )
         if "result" in resp:
             if "result" in resp["result"]:
                 if resp["result"]["result"] == "Success":
@@ -715,7 +713,7 @@ class Table:
                 sleep_message(msg, 10)
                 self.orders(Dex().api.orders)
                 sleep_message(msg, 10)
-                self.swaps_summary(Dex().api.rpc("my_recent_swaps").json())
+                self.swaps_summary(Dex().api.rpc("my_recent_swaps"))
                 sleep_message(msg, 10)
             except KeyboardInterrupt:
                 break
@@ -1128,7 +1126,7 @@ class Tui:
         self.table.orders(self.dex.api.orders)
 
     def view_swaps(self):
-        self.table.swaps_summary(dex.api.rpc("my_recent_swaps").json())
+        self.table.swaps_summary(dex.api.rpc("my_recent_swaps"))
 
     def loop_views(self):
         self.table.loop_views()
