@@ -22,9 +22,9 @@ if OP_SYS not in VALID_OP_SYS:
     sys.exit()
 
 if OP_SYS.lower() == "windows":
-    MM2BIN = f"{SCRIPT_PATH}/mm2/mm2.exe"
+    KDFBIN = f"{SCRIPT_PATH}/kdf/kdf.exe"
 else:
-    MM2BIN = f"{SCRIPT_PATH}/mm2/mm2"
+    KDFBIN = f"{SCRIPT_PATH}/kdf/kdf"
 
 ERROR_EVENTS = [
     "StartFailed",
@@ -51,30 +51,14 @@ PRICE_URLS = [
 
 BOT_SETTINGS_FILE = f"{SCRIPT_PATH}/config/bot_settings.json"
 BOT_PARAMS_FILE = f"{SCRIPT_PATH}/config/makerbot_command_params.json"
-MM2_LOG_FILE = f"{SCRIPT_PATH}/logs/mm2_output.log"
+KDF_LOG_FILE = f"{SCRIPT_PATH}/logs/kdf_output.log"
 MM2_JSON_FILE = f"{SCRIPT_PATH}/config/MM2.json"
 TEMP_MM2_JSON_FILE = f"{SCRIPT_PATH}/scan/MM2.json"
 USERPASS_FILE = f"{SCRIPT_PATH}/config/userpass"
 SEEDS_FILE = f"{SCRIPT_PATH}/scan/seed_phrases.json"
 
-# Update activation commands file on launch
-ACTIVATION_FILE = f"{SCRIPT_PATH}/activate_commands.json"
-ACTIVATION_URL = "http://stats.kmd.io/api/atomicdex/activation_commands/"
-try:
-    print("Getting activation commands...")
-    ACTIVATE_COMMANDS = requests.get(ACTIVATION_URL, timeout=5).json()["commands"]
-    with open(f"{SCRIPT_PATH}/activate_commands.json", "w+") as f:
-        json.dump(ACTIVATE_COMMANDS, f, indent=4)
-except:
-    if os.path.exists(f"{SCRIPT_PATH}/activate_commands.json"):
-        ACTIVATE_COMMANDS = json.load(
-            open(f"{SCRIPT_PATH}/activate_commands.json", "r")
-        )
-    else:
-        print(
-            f"Unable to load {ACTIVATE_COMMANDS}, please check your internet connection, or report this to smk on Discord."
-        )
-        sys.exit()
+# Local coins config used to build activation parameters
+COINS_CONFIG_FILE = f"{SCRIPT_PATH}/config/coins_config.json"
 
 # Update coins file on launch
 COINS_FILE = f"{SCRIPT_PATH}/coins"

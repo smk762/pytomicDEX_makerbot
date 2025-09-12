@@ -5,7 +5,7 @@ from models import Dex, Table
 dex = Dex()
 tables = Table()
 
-coins_list = dex.enabled_coins_list
+coins_list = dex.enabled_coins
 
 if len(coins_list) == 0:
     status_print("No coins are activated!")
