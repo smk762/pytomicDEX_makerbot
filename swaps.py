@@ -7,6 +7,6 @@ table = Table()
 # Documentation reference: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-api-legacy/my_recent_swaps.html
 if len(sys.argv) > 1:
     limit = int(sys.argv[1])
-    table.swaps_summary(Dex().api.rpc("my_recent_swaps").json(), limit)
+    table.swaps_summary(Dex().api.rpc("my_recent_swaps", {"limit": limit}).json())
 else:
-    table.swaps_summary(Dex().api.rpc("my_recent_swaps").json())
+    table.swaps_summary(Dex().api.rpc("my_recent_swaps", {"limit": 1000}).json())

@@ -43,8 +43,11 @@ ERROR_EVENTS = [
 ]
 
 # NOTE: Users should set this to their own desired url. The URL below is for refrence only, use at your own risk.
-#PRICES_URL = "https://prices.cipig.net:1717/api/v2/tickers?expire_at=600"
-PRICES_URL = "https://prices.komodo.earth/api/v2/tickers"
+# PRICE_URL = "https://prices.cipig.net:1717/api/v2/tickers?expire_at=600"
+PRICE_URLS = [
+    "https://prices.komodian.info/api/v2/tickers?expire_at=900",
+    "https://defi-stats.komodo.earth/api/v3/prices/tickers_v2?expire_at=900"
+]
 
 BOT_SETTINGS_FILE = f"{SCRIPT_PATH}/config/bot_settings.json"
 BOT_PARAMS_FILE = f"{SCRIPT_PATH}/config/makerbot_command_params.json"
@@ -58,7 +61,8 @@ SEEDS_FILE = f"{SCRIPT_PATH}/scan/seed_phrases.json"
 ACTIVATION_FILE = f"{SCRIPT_PATH}/activate_commands.json"
 ACTIVATION_URL = "http://stats.kmd.io/api/atomicdex/activation_commands/"
 try:
-    ACTIVATE_COMMANDS = requests.get(ACTIVATION_URL).json()["commands"]
+    print("Getting activation commands...")
+    ACTIVATE_COMMANDS = requests.get(ACTIVATION_URL, timeout=5).json()["commands"]
     with open(f"{SCRIPT_PATH}/activate_commands.json", "w+") as f:
         json.dump(ACTIVATE_COMMANDS, f, indent=4)
 except:
@@ -76,8 +80,8 @@ except:
 COINS_FILE = f"{SCRIPT_PATH}/coins"
 COINS_URL = "https://raw.githubusercontent.com/KomodoPlatform/coins/master/coins"
 try:
-    print("coins file not found, downloading...")
-    coins = requests.get(COINS_URL).json()
+    print("Updating coins file...")
+    coins = requests.get(COINS_URL, timeout=5).json()
     with open(COINS_FILE, "w", encoding="utf-8") as f:
         json.dump(coins, f, ensure_ascii=False, indent=4)
 except:

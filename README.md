@@ -30,6 +30,15 @@ pip3 install -r requirements.txt
 [![Watch the video](https://user-images.githubusercontent.com/35845239/147961225-ec910ec2-7c73-47d1-afc0-3033958e50cc.png)](https://odysee.com/@Dragonhound:7/pytomicDEX-makerbot:8)
 
 
+# Configuration
+- Initial config is done through the TUI on first launch, and stored in the `config` folder.
+- You can modify the config in the TUI with `View/Update Makerbot`
+- You can customise pair configs in `makerbot_command_params.json` for min/max trade and spread.
+- You can edit `bot_settings.json` manually to add coins or change defaults, which will be applied to `makerbot_command_params.json` next time you launch the TUI.
+- Existing customised pair configs in `makerbot_command_params.json` will be retained if the base/quote coins are still in `bot_settings.json`.
+- To completely reset your config, select `Reset Makerbot Config` in the TUI.
+
+
 # Warning
 
 Use this with small amounts you are comfortable with and be conscious of your risk tolerance. Always make a secure offline backup of your seed phrase. 

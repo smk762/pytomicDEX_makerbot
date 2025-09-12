@@ -10,7 +10,7 @@ import subprocess
 from const import (
     ACTIVE_TASKS,
     USERPASS_FILE,
-    PRICES_URL,
+    PRICE_URLS,
     ERROR_EVENTS,
     BOT_PARAMS_FILE,
     BOT_SETTINGS_FILE,
@@ -18,7 +18,7 @@ from const import (
     MM2_LOG_FILE,
     MM2BIN,
     MM2_JSON_FILE,
-    COINS_LIST
+    COINS_LIST,
 )
 from helpers import (
     color_input,
@@ -34,7 +34,7 @@ from helpers import (
     get_valid_input,
     sec_to_hms,
     generate_rpc_pass,
-    get_prices
+    get_prices,
 )
 
 
@@ -113,9 +113,7 @@ class Dex:
                         else:
                             ACTIVE_TASKS.update({"unknown": resp["result"]["task_id"]})
                     else:
-                        status_print(
-                            f"{coin} is activating. Response: {resp['result']}"
-                        )
+                        status_print(f"{coin} is activating. Response: {resp}")
                 elif "error" in resp:
                     if resp["error"].find("already initialized") >= 0:
                         status_print(f"{coin} was already activated.")
@@ -237,7 +235,7 @@ class Dex:
         return successful_swaps_count, failed_swaps_count, total_value_delta
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_recent_swaps.html
-    def get_recent_swaps(self, limit=1000):
+    def get_recent_swaps(self, limit=100):
         return self.mm2_proxy({"method": "my_recent_swaps", "limit": limit})
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/cancel_all_orders.html
@@ -447,6 +445,7 @@ class Table:
         self.dex = Dex()
 
     def swaps_summary(self, recent_swaps, limit=500):
+        current_prices = get_prices()
         if "error" in recent_swaps:
             error_print(recent_swaps["error"])
         elif recent_swaps["result"]["total"] == 0:
@@ -487,8 +486,6 @@ class Table:
                 else:
                     # print("skipping, swap failed")
                     pass
-
-            current_prices = get_prices()
 
             total_swaps = 0
             total_value_delta = 0
@@ -715,7 +712,9 @@ class Table:
                 sleep_message(msg, 10)
                 self.orders(Dex().api.orders)
                 sleep_message(msg, 10)
-                self.swaps_summary(Dex().api.rpc("my_recent_swaps").json())
+                self.swaps_summary(
+                    Dex().api.rpc(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
+                )
                 sleep_message(msg, 10)
             except KeyboardInterrupt:
                 break
@@ -748,19 +747,24 @@ class Config:
         spread = bot_settings["default_spread"]
         order_refresh_rate = bot_settings["refresh_rate"]
         use_bidirectional_threshold = True
-        params = {"price_url": PRICES_URL, "bot_refresh_rate": int(order_refresh_rate)}
+        params = {"price_urls": PRICE_URLS, "bot_refresh_rate": int(order_refresh_rate)}
 
-        configs = {}
+        if os.path.exists(BOT_PARAMS_FILE):
+            with open(BOT_PARAMS_FILE, "r", encoding="utf-8") as f:
+                configs = json.load(f)["cfg"]
+        else:
+            configs = {}
         for base in sell_coins:
             for rel in buy_coins:
                 if base != rel:
-                    configs.update(
-                        {
-                            f"{base}/{rel}": self.get_config(
-                                base, rel, min_usd, max_usd, spread
-                            )
-                        }
-                    )
+                    if f"{base}/{rel}" not in configs:
+                        configs.update(
+                            {
+                                f"{base}/{rel}": self.get_config(
+                                    base, rel, min_usd, max_usd, spread
+                                )
+                            }
+                        )
 
         params.update({"cfg": configs})
 
@@ -770,6 +774,15 @@ class Config:
     def init_bot_params(self, reset=False):
         if not os.path.exists(BOT_PARAMS_FILE) or reset:
             self.create_bot_settings()
+        else:
+            with open(BOT_SETTINGS_FILE, "r") as f:
+                bot_settings = json.load(f)
+            self.update_bot_params(bot_settings)
+
+    def update_bot_params(self, bot_settings):
+        with open(BOT_SETTINGS_FILE, "w+") as f:
+            json.dump(bot_settings, f, indent=4)
+        self.create_bot_params(bot_settings)
 
     def create_bot_settings(self):
         q = "n"
@@ -779,35 +792,30 @@ class Config:
                 ["KMD", "LTC"],
                 set(COINS_LIST),
                 "tickers",
-                2
+                2,
             )
             buy_coins = self.validate_list_input(
                 "Enter tickers of coins you want to buy, seperated by a space (press enter to use same coins as above):\n",
                 sell_coins,
-                set(COINS_LIST),                
+                set(COINS_LIST),
                 "tickers",
-                2
+                2,
             )
             min_usd = self.validate_float_input(
-                "Enter default minimum trade value in USD (default: $10): ",
-                10,
-                1
+                "Enter default minimum trade value in USD (default: $10): ", 10, 1
             )
             max_usd = self.validate_float_input(
-                "Enter default maximum trade value in USD (default: $500): ",
-                500,
-                20
+                "Enter default maximum trade value in USD (default: $500): ", 500, 20
             )
             spread = self.validate_float_input(
-                "Enter default spread percentage (default: 3%): ",
-                3,
-                0.01
+                "Enter default spread percentage (default: 3%): ", 3, 0.01
             )
-            refresh_rate = self.validate_int_input(
-                "How often to update prices in minutes (default: 3): ",
-                3,
-                2
-            ) * 60
+            refresh_rate = (
+                self.validate_int_input(
+                    "How often to update prices in minutes (default: 3): ", 3, 2
+                )
+                * 60
+            )
 
             bot_settings = {
                 "sell_coins": list(set(sell_coins)),
@@ -816,7 +824,7 @@ class Config:
                 "default_max_usd": int(max_usd),
                 "default_spread": 1 + (float(spread) / 100),
                 "refresh_rate": refresh_rate,
-                "prices_api": PRICES_URL,
+                "prices_api": PRICE_URLS,
                 "prices_api_timeout": 180,
                 "use_bidirectional_threshold": True,
             }
@@ -1009,7 +1017,6 @@ class Config:
                 elif value == "":
                     value = default
                 return value
-            
 
     def validate_int_input(self, q=None, default=0, min=0):
         while True:
@@ -1035,7 +1042,9 @@ class Config:
                     value = default
                 return value
 
-    def validate_list_input(self, q=None, default=list(), valid_options=set(), category=None, min_length=2):
+    def validate_list_input(
+        self, q=None, default=list(), valid_options=set(), category=None, min_length=2
+    ):
         while True:
             try:
                 if q is None:
@@ -1044,7 +1053,7 @@ class Config:
                     value = color_input(q).split(" ")
                     if value[0] == "":
                         value = default
-                value = [i for i in value if i != '']
+                value = [i for i in value if i != ""]
                 if len(value) < min_length:
                     raise IndexError
                 if len(valid_options) > 0:
@@ -1053,11 +1062,15 @@ class Config:
                         raise ValueError
                 return value
             except ValueError:
-                error_print(f"The following selections are not a valid option: {invalid_options}, try again.")
+                error_print(
+                    f"The following selections are not a valid option: {invalid_options}, try again."
+                )
                 if category == "tickers":
-                    error_print("The valid tickers can be found at https://github.com/KomodoPlatform/coins/blob/master/utils/coins_config.json")
+                    error_print(
+                        "The valid tickers can be found at https://github.com/KomodoPlatform/coins/blob/master/utils/coins_config.json"
+                    )
             except IndexError:
-                error_print("You must select two or more tickers, try again")            
+                error_print("You must select two or more tickers, try again")
             except KeyboardInterrupt:
                 if value is None:
                     value = default
@@ -1128,7 +1141,7 @@ class Tui:
         self.table.orders(self.dex.api.orders)
 
     def view_swaps(self):
-        self.table.swaps_summary(dex.api.rpc("my_recent_swaps").json())
+        self.table.swaps_summary(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
 
     def loop_views(self):
         self.table.loop_views()
