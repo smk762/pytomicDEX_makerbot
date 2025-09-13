@@ -14,9 +14,8 @@ from const import (
     ERROR_EVENTS,
     BOT_PARAMS_FILE,
     BOT_SETTINGS_FILE,
-    ACTIVATE_COMMANDS,
-    MM2_LOG_FILE,
-    MM2BIN,
+    KDF_LOG_FILE,
+    KDFBIN,
     MM2_JSON_FILE,
     COINS_LIST,
 )
@@ -28,41 +27,49 @@ from helpers import (
     error_print,
     sleep_message,
     preexec,
-    get_mm2,
+    get_kdf,
     get_price,
     get_order_count,
     get_valid_input,
     sec_to_hms,
     generate_rpc_pass,
     get_prices,
+    compute_kdf_version_suffix,
+    center_visible,
+    get_seednodes_list,
+    wait_continue,
 )
+
+from activation import build_activate_command
 
 
 class Dex:
-    def __init__(self, mm2_log=MM2_LOG_FILE, mm2_config=MM2_JSON_FILE):
-        self.mm2_log = mm2_log
-        self.mm2_config = mm2_config
-        self.api = pykomodefi.KomoDeFi_API(config=self.mm2_config)
+    def __init__(self, kdf_log=KDF_LOG_FILE, kdf_config=MM2_JSON_FILE):
+        self.kdf_log = kdf_log
+        self.kdf_config = kdf_config
+        self.api = pykomodefi.KomoDeFi_API(config=self.kdf_config)
+        self.enabled_coins = self.api.enabled_coins_v2
 
+    
     @property
     def is_running(self):
-        try:
-            self.api.version
-            return True
-        except:
+        is_running = self.api.version
+        if "error" in is_running:
             return False
+        else:
+            return True
 
     def start(self):
         if not self.is_running:
-            os.environ["MM_CONF_PATH"] = self.mm2_config
-            if not os.path.isfile(MM2BIN):
-                error_print(f"mm2 binary not found in {MM2BIN}!")
-                get_mm2()
-            mm2_output = open(self.mm2_log, "w+")
+            os.environ["MM_CONF_PATH"] = self.kdf_config
+            if not os.path.isfile(KDFBIN):
+                error_print(f"kdf binary not found in {KDFBIN}!")
+                get_kdf()
+            kdf_output = open(self.kdf_log, "w+")
             subprocess.Popen(
-                [MM2BIN],
-                stdout=mm2_output,
-                stderr=mm2_output,
+                [KDFBIN],
+                stdout=kdf_output,
+                stderr=kdf_output,
                 universal_newlines=True,
                 preexec_fn=preexec,
             )
@@ -70,18 +77,29 @@ class Dex:
             success_print("{:^60}".format(" Komodo DeFi Framework starting."))
             success_print(
                 "{:^60}".format(
-                    f" Use 'tail -f {self.mm2_log}' for mm2 console messages."
+                    f" Use 'tail -f {self.kdf_log}' for kdf console messages."
                 )
             )
 
-    def mm2_proxy(self, params):
+    def kdf_proxy(self, params):
         try:
-            r = self.api.rpc(params["method"], params)
-            resp = r.json()
+            resp = self.api.rpc(params["method"], params)
+            try:
+                pass
+                # resp = r.json()
+            except Exception as e:
+                print(f"Error getting response: {e}")
+                if "NewConnectionError" in str(r):
+                    self.start()
+                    r = self.api.rpc(params["method"], params)
+                    resp = r.json()
+                else:
+                    print(f"Response: {r}")
+                    resp = r
         except requests.exceptions.RequestException as e:
             self.start()
-            r = self.api.rpc(params["method"], params)
-            resp = r.json()
+            resp = self.api.rpc(params["method"], params)
+            # resp = r.json()
             if "error" in resp:
                 if resp["error"].find("Userpass is invalid"):
                     error_print(
@@ -94,7 +112,7 @@ class Dex:
         for coin in coins_list:
             activation_params = self.get_activation_command(coin)
             if activation_params:
-                resp = self.mm2_proxy(activation_params)
+                resp = self.kdf_proxy(activation_params)
                 if "result" in resp:
                     if "balance" in resp["result"]:
                         status_print(f"{coin} activated. Balance: {resp['balance']}")
@@ -123,11 +141,7 @@ class Dex:
                 error_print(f"Launch params not found for {coin}!")
 
     def get_activation_command(self, coin):
-        activation_command = None
-        for protocol in ACTIVATE_COMMANDS:
-            if coin in ACTIVATE_COMMANDS[protocol]:
-                activation_command = ACTIVATE_COMMANDS[protocol][coin]
-        return activation_command
+        return build_activate_command(coin)
 
     def get_task(self, method, task_id):
         params = {
@@ -135,50 +149,66 @@ class Dex:
             "mmrpc": "2.0",
             "params": {"task_id": task_id, "forget_if_finished": False},
         }
-        resp = self.mm2_proxy(params)
+        resp = self.kdf_proxy(params)
         return resp
 
     def get_version(self):
         return self.api.version
 
     def quit(self):
-        resp = self.mm2_proxy({"method": "stop"})
+        resp = self.kdf_proxy({"method": "stop"})
         return resp
 
     @property
-    def enabled_coins_list(self):
-        try:
-            return [i["ticker"] for i in self.api.enabled_coins]
-        except Exception as e:
-            print(e)
-            return []
-
-    @property
     def status(self):
-        enabled_coins = self.enabled_coins_list
-        current_prices = get_prices()
-        maker_orders, taker_orders, order_count = get_order_count(self.api.orders)
-        successful_swaps_count, failed_swaps_count, delta = self.get_recent_swaps_info(
-            current_prices
-        )
-        active_swaps_count = len(self.api.active_swaps["uuids"])
-        balance = self.get_total_balance_usd(enabled_coins, current_prices)
+        try:
+            current_prices = get_prices()
+        except Exception:
+            current_prices = {}
+
+        try:
+            orders_obj = self.api.orders
+            maker_orders, taker_orders, order_count = get_order_count(orders_obj)
+        except Exception:
+            maker_orders, taker_orders, order_count = {}, {}, 0
+
+        try:
+            successful_swaps_count, failed_swaps_count, delta = self.get_recent_swaps_info(
+                current_prices
+            )
+        except Exception:
+            successful_swaps_count, failed_swaps_count, delta = 0, 0, 0
+
+        try:
+            active_swaps = self.api.active_swaps
+            active_swaps_count = len(active_swaps.get("uuids", [])) if isinstance(active_swaps, dict) else 0
+        except Exception:
+            active_swaps_count = 0
+
+        try:
+            balance = self.get_total_balance_usd(current_prices)
+        except Exception:
+            balance = 0
+
+        try:
+            ver = self.api.version
+            version_line = f"KDF Version: {ver}{compute_kdf_version_suffix(ver)}"
+        except Exception:
+            version_line = "KDF Version: unavailable"
 
         return "{:^60}\n{:^60}\n{:^60}\n{:^60}".format(
-            f"MM2 Version: {self.api.version}",
+            center_visible(version_line, 60),
             f"Swaps: {active_swaps_count} active, {successful_swaps_count} complete, {failed_swaps_count} failed",
             f"Delta: ${round(delta,2)} USD. Balance: ${round(balance,2)} USD",
-            f"{(len(enabled_coins))} Coins, {order_count} Orders active.",
+            f"{(len(self.enabled_coins))} Coins, {order_count} Orders active.",
         )
 
-    def get_total_balance_usd(self, enabled_coins=None, current_prices=None):
-        if not enabled_coins:
-            enabled_coins = self.enabled_coins_list
+    def get_total_balance_usd(self, current_prices=None):
         if not current_prices:
             current_prices = get_prices()
 
         total_balance_usd = 0
-        for coin in enabled_coins:
+        for coin in self.enabled_coins:
             resp = self.get_balance(coin)
             if "balance" in resp:
                 price = get_price(coin, current_prices)
@@ -195,10 +225,23 @@ class Dex:
         total_value_delta = 0
         failed_swaps_count = 0
         successful_swaps_count = 0
-        recent_swaps = self.get_recent_swaps()
+        recent_swaps = {}
+        try:
+            recent_swaps = self.get_recent_swaps() or {}
+        except Exception:
+            return 0, 0, 0
+
+        swaps = None
+        if isinstance(recent_swaps, dict):
+            res = recent_swaps.get("result")
+            if isinstance(res, dict):
+                swaps = res.get("swaps")
+        if not isinstance(swaps, list):
+            return 0, 0, 0
+
         swaps_summary = {"coins": {}}
 
-        for swap in recent_swaps["result"]["swaps"]:
+        for swap in swaps:
             include_swap = True
 
             for event in swap["events"]:
@@ -236,7 +279,7 @@ class Dex:
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_recent_swaps.html
     def get_recent_swaps(self, limit=100):
-        return self.mm2_proxy({"method": "my_recent_swaps", "limit": limit})
+        return self.kdf_proxy({"method": "my_recent_swaps", "limit": limit})
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/cancel_all_orders.html
     def cancel_all_orders(self, coin=None):
@@ -245,22 +288,22 @@ class Dex:
                 "method": "cancel_all_orders",
                 "cancel_by": {"type": "Coin", "data": {"ticker": coin}},
             }
-            return self.mm2_proxy(params)
+            return self.kdf_proxy(params)
         params = {"method": "cancel_all_orders", "cancel_by": {"type": "All"}}
-        return self.mm2_proxy(params)
+        return self.kdf_proxy(params)
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_balance.html
     def get_balance(self, coin):
-        return self.mm2_proxy({"method": "my_balance", "coin": coin})
+        return self.kdf_proxy({"method": "my_balance", "coin": coin})
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/my_balance.html
     def disable_coin(self, coin):
-        return self.mm2_proxy({"method": "disable_coin", "coin": coin})
+        return self.kdf_proxy({"method": "disable_coin", "coin": coin})
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-20/withdraw.html
     def withdraw(self, coin, amount, address):
         if amount == "MAX":
-            return self.mm2_proxy(
+            return self.kdf_proxy(
                 {
                     "mmrpc": "2.0",
                     "method": "withdraw",
@@ -269,7 +312,7 @@ class Dex:
                 }
             )
         else:
-            return self.mm2_proxy(
+            return self.kdf_proxy(
                 {
                     "mmrpc": "2.0",
                     "method": "withdraw",
@@ -280,13 +323,13 @@ class Dex:
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/send_raw_transaction.html
     def send_raw_tx(self, coin, tx_hex):
-        return self.mm2_proxy(
+        return self.kdf_proxy(
             {"method": "send_raw_transaction", "coin": coin, "tx_hex": tx_hex}
         )
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/validateaddress.html
     def validate_address(self, coin, address):
-        return self.mm2_proxy(
+        return self.kdf_proxy(
             {"method": "validateaddress", "coin": coin, "address": address}
         )
 
@@ -305,27 +348,25 @@ class Dex:
 
 
 class MakerBot:
-    def __init__(self, mm2_config=MM2_JSON_FILE):
+    def __init__(self, kdf_config=MM2_JSON_FILE):
         self.config = Config()
-        self.dex = Dex(mm2_config=mm2_config)
+        self.dex = Dex(kdf_config=kdf_config)
         self.params = self.config.load_params()
         self.settings = self.config.load_settings()
         pass
 
-    def activate_bot_coins(self, enabled_coins=False):
-        if not enabled_coins:
-            enabled_coins = self.dex.enabled_coins_list
+    def activate_bot_coins(self):
         coins_list = list(
             set(self.settings["buy_coins"] + self.settings["sell_coins"])
-            - set(enabled_coins)
+            - set(self.dex.enabled_coins)
         )
         if len(coins_list) > 0:
             success_print("Activating Makerbot coins...")
             self.dex.activate_coins(coins_list)
-            success_print(f"Done. Active coins: {self.dex.enabled_coins_list}")
+            success_print(f"Done. Active coins: {self.dex.enabled_coins}")
 
     def start(self):
-        self.activate_bot_coins(self.dex.enabled_coins_list)
+        self.activate_bot_coins()
         # sleep for a bit so in progress orders can be kickstarted
         time.sleep(5)
         pair_count = len(self.params["cfg"])
@@ -358,7 +399,7 @@ class MakerBot:
             "params": {},
             "id": 0,
         }
-        resp = self.dex.mm2_proxy(params)
+        resp = self.dex.kdf_proxy(params)
         if "error" in resp:
             # error_print(resp)
             if "error_type" in resp:
@@ -706,14 +747,14 @@ class Table:
         while True:
             try:
                 self.bot_params(self.config.load_params())
-                coins_list = Dex().enabled_coins_list
+                coins_list = self.dex.enabled_coins
                 sleep_message(msg, 10)
                 self.balances(coins_list)
                 sleep_message(msg, 10)
                 self.orders(Dex().api.orders)
                 sleep_message(msg, 10)
                 self.swaps_summary(
-                    Dex().api.rpc(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
+                    self.dex.api.rpc(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
                 )
                 sleep_message(msg, 10)
             except KeyboardInterrupt:
@@ -856,16 +897,20 @@ class Config:
                 "Looks like you dont have an MM2.json file, lets create one now..."
             )
             rpc_password = generate_rpc_pass(16)
-            mm2_conf = {
+            kdf_conf = {
                 "gui": "pyMakerbot",
                 "netid": 8762,
                 "rpcport": 7763,
                 "i_am_seed": False,
                 "rpc_password": rpc_password,
                 "userhome": '/${HOME#"/"}',
+                "enable_hd": True,
+                "is_bootstrap_node": False,
+                "disable_p2p": False,
+                "seednodes": get_seednodes_list()
             }
-
-            new_seed = color_input("[E]nter seed manually or [G]enerate one? [E/G]: ")
+            # TODO: Add validation for BIP39 mnemonic
+            new_seed = color_input("[E]nter BIP39 mnemonic manually or [G]enerate one? [E/G]: ")
             while new_seed not in ["G", "g", "E", "e"]:
                 error_print("Invalid input!")
                 new_seed = color_input(
@@ -878,10 +923,10 @@ class Config:
                 m = mnemonic.Mnemonic("english")
                 passphrase = m.generate(strength=256)
 
-            mm2_conf.update({"passphrase": passphrase})
+            kdf_conf.update({"passphrase": passphrase})
 
             with open(MM2_JSON_FILE, "w+") as f:
-                json.dump(mm2_conf, f, indent=4)
+                json.dump(kdf_conf, f, indent=4)
                 status_print(f"{MM2_JSON_FILE} file created.")
                 status_print(
                     "Be sure to make a secure backup of your seed phrase offline!"
@@ -890,6 +935,25 @@ class Config:
             with open(USERPASS_FILE, "w+") as f:
                 f.write(f'userpass="{rpc_password}"')
                 status_print("userpass file created.")
+        else:
+            with open(MM2_JSON_FILE, "r") as f:
+                kdf_conf = json.load(f)
+                len_conf = len(kdf_conf)
+                if "enable_hd" not in kdf_conf:
+                    kdf_conf["enable_hd"] = True
+                if "is_bootstrap_node" not in kdf_conf:
+                    kdf_conf["is_bootstrap_node"] = False
+                if "disable_p2p" not in kdf_conf:
+                    kdf_conf["disable_p2p"] = False
+                if "seednodes" not in kdf_conf or len(kdf_conf["seednodes"]) == 0:
+                    kdf_conf["seednodes"] = get_seednodes_list()
+                if len_conf != len(kdf_conf):
+                    with open(MM2_JSON_FILE, "w+") as f:
+                        print(f"Migrating {MM2_JSON_FILE} file...")
+                        json.dump(kdf_conf, f, indent=4)
+                        status_print(f"{MM2_JSON_FILE} file migrated.")
+                else:
+                    status_print(f"{MM2_JSON_FILE} file already exists.")
 
     def get_config(self, base, rel, min_usd, max_usd, spread):
         config_template = {
@@ -1079,15 +1143,15 @@ class Config:
                 return value
 
 
-table = Table()
-dex = Dex()
-
-
 class Tui:
     def __init__(self):
         self.config = Config()
         self.config.init_MM2_json()
+        print(f"KDF config: {MM2_JSON_FILE}")
+        print(f"KDF Logs: {KDF_LOG_FILE}")
         self.config.init_bot_params()
+        print(f"Bot settings: {BOT_SETTINGS_FILE}")
+        print(f"Bot params: {BOT_PARAMS_FILE}")
         self.dex = Dex()
         self.bot = MakerBot()
         self.table = Table()
@@ -1112,7 +1176,7 @@ class Tui:
                     " "
                 )
                 if isinstance(coins, list):
-                    dex.activate_coins(coins)
+                    self.dex.activate_coins(coins)
                     break
             except KeyboardInterrupt:
                 break
@@ -1129,10 +1193,9 @@ class Tui:
         if task_id not in task_ids:
             error_print(f"{task_id} not found in active tasks!")
         else:
-            dex = Dex()
             for method, task in ACTIVE_TASKS.items():
                 if task_id == task:
-                    success_print(dex.get_task(method, task_id))
+                    success_print(self.dex.get_task(method, task_id))
 
     def view_balances(self):
         self.table.balances(self.dex.enabled_coins_list)
@@ -1140,20 +1203,25 @@ class Tui:
     def view_orders(self):
         self.table.orders(self.dex.api.orders)
 
+    def view_docs(self):
+        success_print(
+            "Documentation: https://komodoplatform.com/en/docs/komodo-defi-framework/api/v20/swaps_and_orders/start_simple_market_maker_bot/"
+        )
+        wait_continue()
+
     def view_swaps(self):
-        self.table.swaps_summary(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
+        self.table.swaps_summary(self.dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
 
     def loop_views(self):
         self.table.loop_views()
 
     def withdraw_funds(self):
-        enabled_coins = self.dex.enabled_coins_list
-        self.table.balances(enabled_coins)
-        if len(enabled_coins) > 0:
+        self.table.balances(self.dex.enabled_coins)
+        if len(self.dex.enabled_coins) > 0:
             coin = color_input("Enter the ticker of the coin you want to withdraw: ")
-            while coin not in enabled_coins:
+            while coin not in self.dex.enabled_coins:
                 error_print(
-                    f"{coin} is not enabled. Options are |{'|'.join(enabled_coins)}|, try again."
+                    f"{coin} is not enabled. Options are |{'|'.join(self.dex.enabled_coins)}|, try again."
                 )
                 coin = color_input(
                     "Enter the ticker of the coin you want to withdraw: "
@@ -1162,7 +1230,7 @@ class Tui:
             amount = color_input(
                 f"Enter the amount of {coin} you want to withdraw, or 'MAX' to withdraw full balance: "
             )
-            amount = dex.validate_withdraw_amount(amount)
+            amount = self.dex.validate_withdraw_amount(amount)
             while not amount:
                 error_print(
                     f"{amount} is not 'MAX' or a valid numeric value, try again."
@@ -1170,19 +1238,19 @@ class Tui:
                 amount = color_input(
                     f"Enter the amount of {coin} you want to withdraw, or 'MAX' to withdraw full balance: "
                 )
-                amount = dex.validate_withdraw_amount(amount)
+                amount = self.dex.validate_withdraw_amount(amount)
 
             address = color_input(f"Enter the destination address: ")
-            while not dex.is_address_valid(coin, address):
+            while not self.dex.is_address_valid(coin, address):
                 error_print(f"{address} is not a valid {coin} address, try again.")
                 address = color_input(f"Enter the destination address: ")
 
-            resp = dex.withdraw(coin, amount, address)
+            resp = self.dex.withdraw(coin, amount, address)
             if "error" in resp:
                 error_print(resp)
             elif "result" in resp:
                 if "tx_hex" in resp["result"]:
-                    send_resp = dex.send_raw_tx(coin, resp["result"]["tx_hex"])
+                    send_resp = self.dex.send_raw_tx(coin, resp["result"]["tx_hex"])
                     if "tx_hash" in send_resp:
                         success_print(
                             f"{amount} {coin} sent to {address}. TXID: {send_resp['tx_hash']}"
@@ -1201,7 +1269,7 @@ class Tui:
             q = color_input("Stop Komodo DeFi Framework on exit? [Y/N]: ")
 
         if q.lower() == "y":
-            resp = dex.quit()
+            resp = self.dex.quit()
             if "error" in resp:
                 error_print(resp)
             elif "success" in resp:

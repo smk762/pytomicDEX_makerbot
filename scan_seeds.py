@@ -7,49 +7,50 @@ import json
 from const import (
     SCRIPT_PATH,
     TEMP_MM2_JSON_FILE,
-    ACTIVATE_COMMANDS,
     SEEDS_FILE,
 )
 from models import Dex
+from activation import get_all_coins_from_config, build_activate_command
 
 
 def update_MM2json(seed_phrase):
     with open(TEMP_MM2_JSON_FILE, "r") as f:
-        mm2_conf = json.load(f)
-    mm2_conf.update({"passphrase": seed_phrase})
+        kdf_conf = json.load(f)
+    kdf_conf.update({"passphrase": seed_phrase})
     with open(TEMP_MM2_JSON_FILE, "w+") as f:
-        json.dump(mm2_conf, f, indent=4)
+        json.dump(kdf_conf, f, indent=4)
 
 
 def scan_electrums_for_balances(seed_phrase, seed_phrases):
     dex = Dex()
     balance_found = False
     ignore_coins = ["tBLK", "GIN", "LYNX", "PGT", "CIPHS", "VOTE2021", "HUSH3"]
-    for protocol in ACTIVATE_COMMANDS:
-        for coin in ACTIVATE_COMMANDS[protocol]:
-            activation_command = ACTIVATE_COMMANDS[protocol][coin]
-            try:
-                resp = dex.mm2_proxy(ACTIVATE_COMMANDS[protocol][coin])
-                print(resp)
-                if "balance" in resp:
-                    if float(resp["balance"]) > 0:
-                        balance_found = True
-                        seed_phrases[seed_phrase].update(
-                            {
-                                coin: {
-                                    "address": resp["address"],
-                                    "balance": resp["balance"],
-                                }
+    for coin in get_all_coins_from_config():
+        if coin in ignore_coins:
+            continue
+        activation_command = build_activate_command(coin)
+        try:
+            resp = dex.kdf_proxy(activation_command)
+            print(resp)
+            if "balance" in resp:
+                if float(resp["balance"]) > 0:
+                    balance_found = True
+                    seed_phrases[seed_phrase].update(
+                        {
+                            coin: {
+                                "address": resp["address"],
+                                "balance": resp["balance"],
                             }
-                        )
-                    else:
-                        time.sleep(0.1)
-                        dex.disable_coin(coin)
+                        }
+                    )
+                else:
+                    time.sleep(0.1)
+                    dex.disable_coin(coin)
 
-            except Exception as e:
-                print("---------------------------")
-                print(f"{coin}: {e}")
-                print("---------------------------")
+        except Exception as e:
+            print("---------------------------")
+            print(f"{coin}: {e}")
+            print("---------------------------")
 
     if balance_found:
         with open(SEEDS_FILE, "w", encoding="utf-8") as f:
@@ -62,7 +63,7 @@ if __name__ == "__main__":
         with open(TEMP_MM2_JSON_FILE, "r") as f:
             MM2_JSON = json.load(f)
             if "passphrase" in MM2_JSON:
-                mm2_seed_phrase = MM2_JSON["passphrase"]
+                kdf_seed_phrase = MM2_JSON["passphrase"]
     else:
         print(f"{TEMP_MM2_JSON_FILE} found, exiting...")
         sys.exit()
@@ -75,8 +76,8 @@ if __name__ == "__main__":
 
     with open(SEEDS_FILE, "r") as f:
         seed_phrases = json.load(f)
-        if mm2_seed_phrase not in seed_phrases["seed_phrases"]:
-            seed_phrases["seed_phrases"].update({mm2_seed_phrase: {}})
+        if kdf_seed_phrase not in seed_phrases["seed_phrases"]:
+            seed_phrases["seed_phrases"].update({kdf_seed_phrase: {}})
             with open(SEEDS_FILE, "w", encoding="utf-8") as f:
                 json.dump(seed_phrases, f, ensure_ascii=False, indent=4)
 

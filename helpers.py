@@ -3,11 +3,14 @@ import os
 import sys
 import stat
 import time
+import json
 import string
 import random
 import requests
 from zipfile import ZipFile
-from const import ACTIVATE_COMMANDS, PRICE_URLS, OP_SYS, SCRIPT_PATH
+from const import PRICE_URLS, OP_SYS, SCRIPT_PATH, MM2_JSON_FILE
+from activation import build_activate_command
+import re
 
 def sec_to_hms(sec):
     minutes, seconds = divmod(sec, 60)
@@ -17,9 +20,7 @@ def sec_to_hms(sec):
 
 
 def get_activate_command(coin):
-    for protocol in ACTIVATE_COMMANDS:
-        if coin in ACTIVATE_COMMANDS[protocol]:
-            return ACTIVATE_COMMANDS[protocol][coin]
+    return build_activate_command(coin)
 
 
 def get_valid_input(msg, valid_options):
@@ -75,19 +76,37 @@ def get_short_hash(org, repo, branch):
         return None
 
 
-def get_release_assets_info(org, repo):
-    releases_url = f"https://api.github.com/repos/{org}/{repo}/releases"
-    r = requests.get(releases_url)
-    print(releases_url)
+def get_latest_kdf_release_info():
+    """Return the latest KDF release JSON (tag_name, html_url, assets, ...). Caches for 1h."""
+    now = time.time()
+    cache = _LATEST_KDF_CACHE
+    cache_age = now - (cache.get("ts") or 0)
+    if cache_age < 3600 and cache.get("data"):
+        return cache["data"]
+
+    releases_url = "https://api.github.com/repos/KomodoPlatform/komodo-defi-framework/releases"
     try:
-        return r.json()[0]["assets"]
-    except:
-        error_print(f"{repo} or {org} does not exist!")
-        return None
+        r = requests.get(releases_url, timeout=8)
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, list) and len(data) > 0:
+            latest = data[0]
+            _LATEST_KDF_CACHE.update({"ts": now, "data": latest})
+            return latest
+    except Exception:
+        pass
+    # Fallback minimal structure
+    fallback = {
+        "tag_name": "v2.5.1-beta",
+        "html_url": "https://github.com/KomodoPlatform/komodo-defi-framework/releases/tag/v2.5.1-beta",
+        "assets": [],
+    }
+    _LATEST_KDF_CACHE.update({"ts": now, "data": fallback})
+    return fallback
 
 
-def get_mm2(branch=None):
-    assets = get_release_assets_info("komodoplatform", "komodo-defi-framework")
+def get_kdf(branch=None):
+    assets = get_latest_kdf_release_info().get("assets", [])
     for asset in assets:
         print(asset)
         if OP_SYS.lower() in asset["browser_download_url"].lower():
@@ -96,7 +115,11 @@ def get_mm2(branch=None):
     else:
         error_print("Release not found!")
 
-    download_path = f"{SCRIPT_PATH}/mm2/{asset_name}"
+    # Ensure target directory exists
+    target_dir = f"{SCRIPT_PATH}/kdf"
+    if not os.path.isdir(target_dir):
+        os.makedirs(target_dir, exist_ok=True)
+    download_path = f"{target_dir}/{asset_name}"
     if not os.path.exists(download_path):
         if asset_url:
             download_progress(asset_url, download_path)
@@ -106,9 +129,20 @@ def get_mm2(branch=None):
     with ZipFile(download_path, "r") as zf:
         status_print(f"Extracting {download_path}...")
         zf.extractall(os.path.dirname(download_path))
+        extracted_dir = os.path.dirname(download_path)
+        # Determine extracted filename (mm2 or mm2.exe) and rename to kdf/kdf.exe
+        old_name = "mm2.exe" if OP_SYS.lower() == "windows" else "mm2"
+        new_name = "kdf.exe" if OP_SYS.lower() == "windows" else "kdf"
+        old_path = f"{extracted_dir}/{old_name}"
+        new_path = f"{extracted_dir}/{new_name}"
+        try:
+            if os.path.exists(old_path):
+                os.replace(old_path, new_path)
+        except Exception as e:
+            error_print(f"Failed to rename {old_path} to {new_path}: {e}")
         if OP_SYS.lower() != "windows":
             print("setting perms")
-            os.chmod(f"{os.path.dirname(download_path)}/mm2", stat.S_IEXEC)
+            os.chmod(new_path, stat.S_IEXEC)
             
         status_print("Done!")
 
@@ -217,3 +251,99 @@ def generate_rpc_pass(length):
     str_list = list(rpc_pass)
     random.shuffle(str_list)
     return "".join(str_list)
+
+
+# ---- KDF release and terminal formatting helpers ----
+
+_LATEST_KDF_CACHE = {"ts": 0, "data": None}
+
+
+def format_hyperlink(label, url):
+    """Return an OSC 8 hyperlink sequence for supported terminals."""
+    # Open hyperlink: ESC ] 8 ; ; URL ESC \
+    # Close hyperlink: ESC ] 8 ; ; ESC \
+    open_seq = f"\033]8;;{url}\033\\"
+    close_seq = "\033]8;;\033\\"
+    return f"{open_seq}{label}{close_seq}"
+
+
+_CSI_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+_OSC8_RE = re.compile(r"\x1b\]8;;.*?\x1b\\")
+
+
+def strip_ansi_sequences(text):
+    """Strip ANSI CSI and OSC8 sequences for visible-length calculations."""
+    text = _OSC8_RE.sub("", text)
+    text = _CSI_RE.sub("", text)
+    return text
+
+
+def center_visible(text, width):
+    """Center text accounting for non-printing ANSI sequences."""
+    visible_len = len(strip_ansi_sequences(text))
+    if visible_len >= width:
+        return text
+    pad_total = width - visible_len
+    left = pad_total // 2
+    right = pad_total - left
+    return (" " * left) + text + (" " * right)
+
+
+def compute_kdf_version_suffix(current_version):
+    """Return a suffix for display: ' [latest]' or hyperlinked ' [update]'."""
+    try:
+        info = get_latest_kdf_release_info()
+        latest_tag = info.get("tag_name")
+        release_url = info.get(
+            "html_url",
+            "https://github.com/KomodoPlatform/komodo-defi-framework/releases",
+        )
+        if not latest_tag:
+            return " [latest]"
+        cv = str(current_version or "").lower()
+        lt = str(latest_tag).lower()
+        if cv.startswith(lt) or lt in cv:
+            return " [latest]"
+        return " " + format_hyperlink("[update]", release_url)
+    except Exception:
+        return " [latest]"
+
+
+# ---- Seed nodes loader ----
+
+_SEED_NODES_URL = "https://raw.githubusercontent.com/KomodoPlatform/coins/master/seed-nodes.json"
+_SEED_NODES_PATH = f"{SCRIPT_PATH}/config/seed-nodes.json"
+
+
+def get_seednodes_list():
+    """Return a list of host values from seed-nodes.json.
+
+    Prefers local config/seed-nodes.json. If missing, attempts to download.
+    Returns [] on failure.
+    """
+    try:
+        print(f"Getting seed nodes list from {_SEED_NODES_PATH}...")
+        if os.path.exists(_SEED_NODES_PATH):
+            with open(_SEED_NODES_PATH, "r", encoding="utf-8") as f:
+                try:
+                    data = json.load(f)
+                except Exception as e:
+                    os.remove(_SEED_NODES_PATH)
+                    return get_seednodes_list()
+        else:   
+            r = requests.get(_SEED_NODES_URL, timeout=8)
+            r.raise_for_status()
+            data = r.json()
+            os.makedirs(os.path.dirname(_SEED_NODES_PATH), exist_ok=True)
+            with open(_SEED_NODES_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        hosts = []
+        if isinstance(data, list):
+            for entry in data:
+                if isinstance(entry, dict) and entry.get("host"):
+                    hosts.append(entry.get("host"))
+        return hosts
+    except Exception as e:
+        print(f"Error getting seed nodes list: {e}")
+        print(f"Please update the seed nodes list in your MM2.json file {MM2_JSON_FILE}")
+        sys.exit()
