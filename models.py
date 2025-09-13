@@ -37,7 +37,9 @@ from helpers import (
     compute_kdf_version_suffix,
     center_visible,
     get_seednodes_list,
+    wait_continue,
 )
+
 from activation import build_activate_command
 
 
@@ -1141,13 +1143,15 @@ class Config:
                 return value
 
 
-
-
 class Tui:
     def __init__(self):
         self.config = Config()
         self.config.init_MM2_json()
+        print(f"KDF config: {MM2_JSON_FILE}")
+        print(f"KDF Logs: {KDF_LOG_FILE}")
         self.config.init_bot_params()
+        print(f"Bot settings: {BOT_SETTINGS_FILE}")
+        print(f"Bot params: {BOT_PARAMS_FILE}")
         self.dex = Dex()
         self.bot = MakerBot()
         self.table = Table()
@@ -1198,6 +1202,12 @@ class Tui:
 
     def view_orders(self):
         self.table.orders(self.dex.api.orders)
+
+    def view_docs(self):
+        success_print(
+            "Documentation: https://komodoplatform.com/en/docs/komodo-defi-framework/api/v20/swaps_and_orders/start_simple_market_maker_bot/"
+        )
+        wait_continue()
 
     def view_swaps(self):
         self.table.swaps_summary(self.dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
