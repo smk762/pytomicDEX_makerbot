@@ -1,4 +1,4 @@
-# PytomicDEX Makerbot
+# PytomicDEX Makerbot 
 
 A Terminal User Interface (TUI) for automated trading with [Komodo Platform's](https://komodoplatform.com/) [Komodo DeFi Framework](https://github.com/KomodoPlatform/komodo-defi-framework)
 

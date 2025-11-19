@@ -14,12 +14,13 @@ from const import (
     ERROR_EVENTS,
     BOT_PARAMS_FILE,
     BOT_SETTINGS_FILE,
-    ACTIVATE_COMMANDS,
     MM2_LOG_FILE,
     MM2BIN,
     MM2_JSON_FILE,
     COINS_LIST,
 )
+from activation_manager import ActivationManager
+from pathlib import Path
 from helpers import (
     color_input,
     success_print,
@@ -43,6 +44,23 @@ class Dex:
         self.mm2_log = mm2_log
         self.mm2_config = mm2_config
         self.api = pykomodefi.KomoDeFi_API(config=self.mm2_config)
+        
+        # Initialize activation manager
+        # Get userpass from config
+        with open(mm2_config, 'r') as f:
+            config = json.load(f)
+            userpass = config.get("rpc_password", "")
+        
+        # Create RPC function wrapper for activation manager
+        def rpc_wrapper(method, params):
+            return self.mm2_proxy({"method": method, "params": params})
+        
+        workspace_root = Path(__file__).parent
+        self.activation_manager = ActivationManager(
+            rpc_func=rpc_wrapper,
+            userpass=userpass,
+            workspace_root=workspace_root
+        )
 
     @property
     def is_running(self):
@@ -91,43 +109,92 @@ class Dex:
         return resp
 
     def activate_coins(self, coins_list):
+        """Activate a list of coins using the activation manager."""
+        # Check if HD wallet is enabled
+        with open(self.mm2_config, 'r') as f:
+            config = json.load(f)
+            enable_hd = config.get("enable_hd", False)
+        
         for coin in coins_list:
-            activation_params = self.get_activation_command(coin)
-            if activation_params:
-                resp = self.mm2_proxy(activation_params)
-                if "result" in resp:
-                    if "balance" in resp["result"]:
-                        status_print(f"{coin} activated. Balance: {resp['balance']}")
-                    elif "task_id" in resp["result"]:
-                        status_print(
-                            f"{coin} activated. Task ID: {resp['result']['task_id']}"
-                        )
-                        if coin in ["ARRR", "ZOMBIE"]:
-                            ACTIVE_TASKS.update(
-                                {
-                                    "task::enable_z_coin::status": resp["result"][
-                                        "task_id"
-                                    ]
-                                }
-                            )
-                        else:
-                            ACTIVE_TASKS.update({"unknown": resp["result"]["task_id"]})
-                    else:
-                        status_print(f"{coin} is activating. Response: {resp}")
-                elif "error" in resp:
-                    if resp["error"].find("already initialized") >= 0:
+            try:
+                # Check if coin is a token
+                is_token, parent_coin = self.activation_manager.request_builder.coins_config.is_token(coin)
+                
+                if is_token:
+                    # Activate as token
+                    result = self.activation_manager.activate_token(
+                        coin, 
+                        parent_override=parent_coin,
+                        enable_hd=enable_hd
+                    )
+                else:
+                    # Activate as coin
+                    result = self.activation_manager.activate_coin(
+                        coin,
+                        enable_hd=enable_hd,
+                        wait_for_completion=True
+                    )
+                
+                # Handle result
+                if result.success:
+                    if result.already_enabled:
                         status_print(f"{coin} was already activated.")
+                    elif result.task_id:
+                        status_print(f"{coin} activated. Task ID: {result.task_id}")
+                        # Track ZHTLC coins
+                        if coin in ["ARRR", "ZOMBIE"]:
+                            ACTIVE_TASKS.update({
+                                "task::enable_utxo::status": result.task_id
+                            })
+                        else:
+                            ACTIVE_TASKS.update({"unknown": result.task_id})
                     else:
-                        error_print(resp)
-            else:
-                error_print(f"Launch params not found for {coin}!")
+                        status_print(f"{coin} activated successfully.")
+                else:
+                    error_msg = result.error or "Unknown error"
+                    error_print(f"Failed to activate {coin}: {error_msg}")
+                    
+            except Exception as e:
+                error_print(f"Error activating {coin}: {str(e)}")
 
     def get_activation_command(self, coin):
-        activation_command = None
-        for protocol in ACTIVATE_COMMANDS:
-            if coin in ACTIVATE_COMMANDS[protocol]:
-                activation_command = ACTIVATE_COMMANDS[protocol][coin]
-        return activation_command
+        """Build activation command for a coin on-the-fly.
+        
+        This method is kept for backwards compatibility but now uses
+        the activation manager to build commands dynamically.
+        """
+        try:
+            # Check if coin is a token
+            is_token, parent_coin = self.activation_manager.request_builder.coins_config.is_token(coin)
+            
+            # Check if HD wallet is enabled
+            with open(self.mm2_config, 'r') as f:
+                config = json.load(f)
+                enable_hd = config.get("enable_hd", False)
+            
+            if is_token:
+                # Build token activation request
+                token_request, _ = self.activation_manager.request_builder.build_token_activation_request(coin)
+                return {
+                    "method": token_request.method,
+                    "params": token_request.params
+                }
+            else:
+                # Build coin activation request
+                activation_request = self.activation_manager.request_builder.build_activation_request(
+                    coin, 
+                    enable_hd=enable_hd
+                )
+                return {
+                    "userpass": self.activation_manager.userpass,
+                    "mmrpc": "2.0",
+                    "method": activation_request.method,
+                    "params": activation_request.params,
+                    "id": 0
+                }
+        except Exception as e:
+            error_print(f"Error building activation command for {coin}: {str(e)}")
+            return None
 
     def get_task(self, method, task_id):
         params = {

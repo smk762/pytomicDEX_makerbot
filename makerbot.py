@@ -19,7 +19,7 @@ header = "\
  | |  | | | (_| | |   <  |  __/ | |    | |_) | \033[94m< \033[31m0 0\033[94m >\033[92m | |_   \n\
  |_|  |_|  \__,_| |_|\_\  \___| |_|    |_.__/   \033[94m\_=_/\033[92m   \__|                  \n"
 
-author = "{:^60}".format("Welcome to the Komodo DeFi MakerBot TUI v0.2 by Dragonhound")
+author = "{:^60}".format("Welcome to the Komodo DeFi MakerBot TUI v0.3 by Dragonhound")
 
 
 def main():

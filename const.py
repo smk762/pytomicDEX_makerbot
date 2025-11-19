@@ -22,9 +22,9 @@ if OP_SYS not in VALID_OP_SYS:
     sys.exit()
 
 if OP_SYS.lower() == "windows":
-    MM2BIN = f"{SCRIPT_PATH}/mm2/mm2.exe"
+    MM2BIN = f"{SCRIPT_PATH}/mm2/kdf.exe"
 else:
-    MM2BIN = f"{SCRIPT_PATH}/mm2/mm2"
+    MM2BIN = f"{SCRIPT_PATH}/mm2/kdf"
 
 ERROR_EVENTS = [
     "StartFailed",
@@ -57,38 +57,35 @@ TEMP_MM2_JSON_FILE = f"{SCRIPT_PATH}/scan/MM2.json"
 USERPASS_FILE = f"{SCRIPT_PATH}/config/userpass"
 SEEDS_FILE = f"{SCRIPT_PATH}/scan/seed_phrases.json"
 
-# Update activation commands file on launch
-ACTIVATION_FILE = f"{SCRIPT_PATH}/activate_commands.json"
-ACTIVATION_URL = "http://stats.kmd.io/api/atomicdex/activation_commands/"
-try:
-    print("Getting activation commands...")
-    ACTIVATE_COMMANDS = requests.get(ACTIVATION_URL, timeout=5).json()["commands"]
-    with open(f"{SCRIPT_PATH}/activate_commands.json", "w+") as f:
-        json.dump(ACTIVATE_COMMANDS, f, indent=4)
-except:
-    if os.path.exists(f"{SCRIPT_PATH}/activate_commands.json"):
-        ACTIVATE_COMMANDS = json.load(
-            open(f"{SCRIPT_PATH}/activate_commands.json", "r")
-        )
-    else:
-        print(
-            f"Unable to load {ACTIVATE_COMMANDS}, please check your internet connection, or report this to smk on Discord."
-        )
-        sys.exit()
+# Activation manager will be initialized per instance
+# No longer downloading activation commands - they will be built on-the-fly
+# from coins_config.json via the ActivationManager
 
-# Update coins file on launch
+# Update coins files on launch
 COINS_FILE = f"{SCRIPT_PATH}/coins"
 COINS_URL = "https://raw.githubusercontent.com/KomodoPlatform/coins/master/coins"
+COINS_CONFIG_FILE = f"{SCRIPT_PATH}/mm2/coins_config.json"
+COINS_CONFIG_URL = "https://raw.githubusercontent.com/KomodoPlatform/coins/master/utils/coins_config.json"
+
 try:
-    print("Updating coins file...")
+    print("Updating coins files...")
+    # Download original coins file for backwards compatibility
     coins = requests.get(COINS_URL, timeout=5).json()
     with open(COINS_FILE, "w", encoding="utf-8") as f:
         json.dump(coins, f, ensure_ascii=False, indent=4)
-except:
-    print(
-        f"Unable to load {COINS_FILE}, please check your internet connection, or report this to smk on Discord."
-    )
-    sys.exit()
+    
+    # Download coins_config.json for activation manager
+    coins_config = requests.get(COINS_CONFIG_URL, timeout=5).json()
+    with open(COINS_CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(coins_config, f, ensure_ascii=False, indent=4)
+    
+    print("Coins files updated successfully.")
+except Exception as e:
+    print(f"Warning: Unable to update coins files: {e}")
+    if not os.path.exists(COINS_FILE) or not os.path.exists(COINS_CONFIG_FILE):
+        print("Error: Required coins configuration files are missing.")
+        print("Please check your internet connection, or report this to smk on Discord.")
+        sys.exit()
 
 with open(COINS_FILE, "r", encoding="utf-8") as f:
     coins_data = json.load(f)

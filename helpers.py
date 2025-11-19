@@ -7,7 +7,7 @@ import string
 import random
 import requests
 from zipfile import ZipFile
-from const import ACTIVATE_COMMANDS, PRICE_URLS, OP_SYS, SCRIPT_PATH
+from const import PRICE_URLS, OP_SYS, SCRIPT_PATH
 
 def sec_to_hms(sec):
     minutes, seconds = divmod(sec, 60)
@@ -17,9 +17,17 @@ def sec_to_hms(sec):
 
 
 def get_activate_command(coin):
-    for protocol in ACTIVATE_COMMANDS:
-        if coin in ACTIVATE_COMMANDS[protocol]:
-            return ACTIVATE_COMMANDS[protocol][coin]
+    """Build activation command for a coin on-the-fly.
+    
+    DEPRECATED: This function is kept for backwards compatibility.
+    Please use Dex.get_activation_command() instead.
+    
+    This will create a temporary Dex instance to build the command.
+    """
+    # Import here to avoid circular dependency
+    from models import Dex
+    dex = Dex()
+    return dex.get_activation_command(coin)
 
 
 def get_valid_input(msg, valid_options):
