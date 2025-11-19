@@ -42,7 +42,7 @@ SCZEN: https://api.siascan.com/zen/wallet/api ✓
 ## Fix #2: Case-Sensitive Ticker Lookup ✅
 
 ### Issue
-Coins with special suffixes like `-segwit`, `-bchd` were failing because the code was uppercasing them, but `coins_config.json` stores them with lowercase suffixes.
+Coins with special suffixes like `-segwit`, `-bchd` were failing because the code was uppercasing them at multiple layers, but `coins_config.json` stores them with lowercase suffixes.
 
 **Error**: `Failed to activate DGB-segwit: Unsupported protocol type: UNKNOWN for ticker: DGB-SEGWIT`
 
@@ -54,7 +54,7 @@ Coins with special suffixes like `-segwit`, `-bchd` were failing because the cod
 
 ### Files Modified
 1. `coins_config_manager.py` (lines 62-80)
-2. `activation_manager.py` (multiple locations)
+2. `activation_manager.py` (lines 465-489, 669-731, 293-311, 846-1046, 1048-1130)
 
 ### Changes
 
@@ -75,10 +75,12 @@ def get_coin_config(self, ticker: str):
 ```
 
 #### activation_manager.py
-Removed `.upper()` calls when passing tickers to config lookups:
-- `build_activation_request()`
-- `build_token_activation_request()`
-- `update_nodes_in_request()`
+Removed `.upper()` calls when passing tickers to config lookups and request builders:
+- `build_activation_request()` - Don't uppercase before getting protocol info
+- `build_token_activation_request()` - Don't uppercase before token lookup
+- `update_nodes_in_request()` - Don't uppercase before protocol info
+- `activate_coin()` - Don't uppercase before building request (preserve for state keys only)
+- `activate_token()` - Don't uppercase before building request (preserve for state keys only)
 
 ### Backwards Compatibility
 - Exact match tried first (e.g., "DGB-segwit")
@@ -125,21 +127,23 @@ SC activation:
 
 ## Comprehensive Test Results
 
-All 7 test cases passing:
+All 9 test cases passing:
 
 | Ticker | Type | Method | Status |
 |--------|------|--------|--------|
 | BTC | UTXO | `task::enable_utxo::init` | ✅ |
+| BTC-segwit | SegWit UTXO | `task::enable_utxo::init` | ✅ |
+| LTC-segwit | SegWit UTXO | `task::enable_utxo::init` | ✅ |
+| DGB-segwit | SegWit UTXO | `task::enable_utxo::init` | ✅ |
 | ETH | Platform | `task::enable_eth::init` | ✅ |
 | ATOM | Tendermint | `task::enable_tendermint::init` | ✅ |
 | USDT-ERC20 | Token | `enable_erc20` | ✅ |
-| DGB-segwit | Case-sensitive | `task::enable_utxo::init` | ✅ |
 | SC | SIA | `task::enable_sia::init` | ✅ |
 | SCZEN | SIA Testnet | `task::enable_sia::init` | ✅ |
 
 ```
-RESULTS: 7/7 passed, 0/7 failed
-🎉 ALL TESTS PASSED! 🎉
+FINAL RESULTS: 9/9 passed
+✅ SEGWIT ACTIVATION FIX IS WORKING!
 ```
 
 ---
@@ -151,9 +155,11 @@ RESULTS: 7/7 passed, 0/7 failed
 | `activation_manager.py` | 543-575 | SIA server URL from config |
 | `activation_manager.py` | 571 | SIA method prefix |
 | `activation_manager.py` | 770 | SIA status method prefix |
-| `activation_manager.py` | 465-489 | Remove ticker uppercasing |
-| `activation_manager.py` | 669-731 | Remove ticker uppercasing |
-| `activation_manager.py` | 293-311 | Remove ticker uppercasing |
+| `activation_manager.py` | 465-489 | Remove ticker uppercasing in build_activation_request |
+| `activation_manager.py` | 669-731 | Remove ticker uppercasing in build_token_activation_request |
+| `activation_manager.py` | 293-311 | Remove ticker uppercasing in update_nodes_in_request |
+| `activation_manager.py` | 846-1046 | Preserve ticker case in activate_coin |
+| `activation_manager.py` | 1048-1130 | Preserve ticker case in activate_token |
 | `coins_config_manager.py` | 62-80 | Case-sensitive lookup |
 
 ---
