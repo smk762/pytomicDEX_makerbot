@@ -2,7 +2,7 @@
 import os
 import time
 from helpers import colorize, color_input, status_print, wait_continue
-from models import Tui
+from models import Tui, Config
 
 tui = Tui()
 
@@ -82,5 +82,6 @@ if __name__ == "__main__":
             time.sleep(0.4)
         print("\n")
         break
-
+    config = Config()
+    config.fix_mm2_json()
     main()

@@ -653,7 +653,7 @@ class Table:
             table_print("-" * 169)
             total_value = 0
             for coin in coins_list:
-                resp = Dex().get_balance(coin)
+                resp = self.dex.get_balance(coin)
                 if "balance" in resp:
                     price = get_price(coin, current_prices)
                     total_balance = float(resp["balance"]) + float(
@@ -706,15 +706,13 @@ class Table:
         while True:
             try:
                 self.bot_params(self.config.load_params())
-                coins_list = Dex().enabled_coins_list
+                coins_list = self.dex.enabled_coins_list
                 sleep_message(msg, 10)
                 self.balances(coins_list)
                 sleep_message(msg, 10)
-                self.orders(Dex().api.orders)
+                self.orders(self.dex.api.orders)
                 sleep_message(msg, 10)
-                self.swaps_summary(
-                    Dex().api.rpc(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
-                )
+                self.swaps_summary(self.dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
                 sleep_message(msg, 10)
             except KeyboardInterrupt:
                 break
@@ -848,6 +846,25 @@ class Config:
             )
             self.create_bot_settings()
 
+    def fix_mm2_json(self):
+        if not os.path.exists(MM2_JSON_FILE):
+            self.init_MM2_json()
+        else:
+            status_print("Fixing MM2.json file structure...")
+            with open(MM2_JSON_FILE, "r") as f:
+                mm2_conf = json.load(f)
+                status_print(f"MM2.json file structure: {mm2_conf}")
+            if "is_bootstrap_node" not in mm2_conf:
+                mm2_conf["is_bootstrap_node"] = False
+            if "diable_p2p" not in mm2_conf:
+                mm2_conf["diable_p2p"] = False
+            if "enable_hd" not in mm2_conf:
+                mm2_conf["enable_hd"] = False
+            if "seednodes" not in mm2_conf:
+                mm2_conf["seednodes"] = ["seed01.kmdefi.net", "seed02.kmdefi.net", "seed03.kmdefi.net"]
+            with open(MM2_JSON_FILE, "w") as f:
+                json.dump(mm2_conf, f, indent=4)
+
     # Load or Create MM2.json
     # Documentation: https://developers.komodoplatform.com/basic-docs/atomicdex/atomicdex-setup/configure-mm2-json.html#mm2-json
     def init_MM2_json(self):
@@ -861,8 +878,12 @@ class Config:
                 "netid": 8762,
                 "rpcport": 7763,
                 "i_am_seed": False,
+                "is_bootstrap_node": False,
+                "diable_p2p": False,
                 "rpc_password": rpc_password,
                 "userhome": '/${HOME#"/"}',
+                "enable_hd": False,
+                "seednodes": ["seed01.kmdefi.net", "seed02.kmdefi.net", "seed03.kmdefi.net"]
             }
 
             new_seed = color_input("[E]nter seed manually or [G]enerate one? [E/G]: ")
@@ -1129,10 +1150,9 @@ class Tui:
         if task_id not in task_ids:
             error_print(f"{task_id} not found in active tasks!")
         else:
-            dex = Dex()
             for method, task in ACTIVE_TASKS.items():
                 if task_id == task:
-                    success_print(dex.get_task(method, task_id))
+                    success_print(self.dex.get_task(method, task_id))
 
     def view_balances(self):
         self.table.balances(self.dex.enabled_coins_list)
@@ -1141,7 +1161,7 @@ class Tui:
         self.table.orders(self.dex.api.orders)
 
     def view_swaps(self):
-        self.table.swaps_summary(dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
+        self.table.swaps_summary(self.dex.api.rpc("my_recent_swaps", {"limit": 1000}).json())
 
     def loop_views(self):
         self.table.loop_views()
