@@ -64,7 +64,7 @@ if __name__ == "__main__":
             if "passphrase" in MM2_JSON:
                 mm2_seed_phrase = MM2_JSON["passphrase"]
     else:
-        print(f"{TEMP_MM2_JSON_FILE} found, exiting...")
+        print(f"{TEMP_MM2_JSON_FILE} not found, exiting...")
         sys.exit()
 
     if not os.path.exists(SEEDS_FILE):
