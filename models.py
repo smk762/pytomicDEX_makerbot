@@ -347,6 +347,10 @@ class Dex:
 
     # https://developers.komodoplatform.com/basic-docs/atomicdex-api-legacy/send_raw_transaction.html
     def send_raw_tx(self, coin, tx_hex):
+        if coin in ["SC", "SCZEN"]:
+            return self.mm2_proxy(
+                {"method": "send_raw_transaction", "coin": coin, "tx_json": tx_hex}
+            )
         return self.mm2_proxy(
             {"method": "send_raw_transaction", "coin": coin, "tx_hex": tx_hex}
         )
@@ -814,22 +818,31 @@ class Config:
         use_bidirectional_threshold = True
         params = {"price_urls": PRICE_URLS, "bot_refresh_rate": int(order_refresh_rate)}
 
+        # Get limit_to_coins if it exists, otherwise use empty list
+        limit_to_coins = bot_settings.get("limit_to_coins", [])
+
+        # Load existing configs to preserve custom settings
+        existing_configs = {}
         if os.path.exists(BOT_PARAMS_FILE):
             with open(BOT_PARAMS_FILE, "r", encoding="utf-8") as f:
-                configs = json.load(f)["cfg"]
-        else:
-            configs = {}
+                existing_configs = json.load(f)["cfg"]
+        
+        # Build new configs based on current settings and filter
+        configs = {}
         for base in sell_coins:
             for rel in buy_coins:
                 if base != rel:
-                    if f"{base}/{rel}" not in configs:
-                        configs.update(
-                            {
-                                f"{base}/{rel}": self.get_config(
-                                    base, rel, min_usd, max_usd, spread
-                                )
-                            }
-                        )
+                    # If limit_to_coins is set, only include pairs that contain at least one of the limited coins
+                    if limit_to_coins:
+                        if base not in limit_to_coins and rel not in limit_to_coins:
+                            continue
+                    
+                    pair_key = f"{base}/{rel}"
+                    # Use existing config if available, otherwise create new one
+                    if pair_key in existing_configs:
+                        configs[pair_key] = existing_configs[pair_key]
+                    else:
+                        configs[pair_key] = self.get_config(base, rel, min_usd, max_usd, spread)
 
         params.update({"cfg": configs})
 
@@ -885,6 +898,7 @@ class Config:
             bot_settings = {
                 "sell_coins": list(set(sell_coins)),
                 "buy_coins": list(set(buy_coins)),
+                "limit_to_coins": [],
                 "default_min_usd": int(min_usd),
                 "default_max_usd": int(max_usd),
                 "default_spread": 1 + (float(spread) / 100),
@@ -983,12 +997,12 @@ class Config:
         config_template = {
             "base": "base_coin",
             "rel": "rel_coin",
-            "base_confs": 3,
+            "base_confs": 2,
             "base_nota": True,
-            "rel_confs": 3,
+            "rel_confs": 2,
             "rel_nota": True,
             "enable": True,
-            "price_elapsed_validity": 180,
+            "price_elapsed_validity":  300,
             "check_last_bidirectional_trade_thresh_hold": True,
         }
         cfg = config_template.copy()
@@ -1270,6 +1284,15 @@ class Tui:
             elif "result" in resp:
                 if "tx_hex" in resp["result"]:
                     send_resp = dex.send_raw_tx(coin, resp["result"]["tx_hex"])
+                    if "tx_hash" in send_resp:
+                        success_print(
+                            f"{amount} {coin} sent to {address}. TXID: {send_resp['tx_hash']}"
+                        )
+                    else:
+                        error_print(send_resp)
+                elif "tx_json" in resp["result"]:
+                    # Handle SIA protocol coins (SC, SCZEN)
+                    send_resp = dex.send_raw_tx(coin, resp["result"]["tx_json"])
                     if "tx_hash" in send_resp:
                         success_print(
                             f"{amount} {coin} sent to {address}. TXID: {send_resp['tx_hash']}"
